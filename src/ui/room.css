@@ -1,0 +1,75 @@
+.tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--ink-2);
+  border: 1px solid var(--board-line);
+  border-radius: var(--radius);
+  padding: 4px;
+}
+
+.tabs__tab {
+  flex: 1;
+  min-height: 40px;
+  border-radius: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.tabs__tab--on {
+  background: var(--ink-3);
+  color: var(--text);
+}
+
+.roster__detail {
+  border-top: none;
+}
+
+.roster__bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.roster__traits {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.kit {
+  border: 1px solid var(--board-line);
+  border-radius: var(--radius);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kit--owned {
+  background: rgba(111, 155, 95, 0.06);
+  border-color: rgba(111, 155, 95, 0.25);
+}
+
+.kit__name {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.kit__blurb {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.kit__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}

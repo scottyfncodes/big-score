@@ -1,0 +1,145 @@
+.city-heat__tier {
+  font-family: var(--serif);
+  font-size: 20px;
+  margin-top: 2px;
+}
+
+.city-heat__num {
+  font-size: 26px;
+  color: var(--gold);
+}
+
+.city-heat__line {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.map {
+  background: linear-gradient(160deg, #171310, #100d0b);
+}
+
+.map__svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1 / 0.82;
+}
+
+.map__dot {
+  fill: var(--text-faint);
+}
+
+.map__dot--live {
+  fill: var(--red);
+}
+
+/* Opacity only — the SVG `r` property is not animatable everywhere, and a
+ * halo that silently stops pulsing is worse than one that only fades. */
+.map__halo {
+  fill: none;
+  stroke: rgba(200, 69, 47, 0.5);
+  stroke-width: 0.5;
+  animation: pulse 2.6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.75; }
+}
+
+.map__label {
+  fill: var(--text-dim);
+  font-size: 3.1px;
+  text-anchor: middle;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.map__pin {
+  cursor: pointer;
+}
+
+.map__pin--locked {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.map__pin:active .map__dot {
+  fill: var(--gold);
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  padding: 12px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  border-radius: 2px;
+  box-shadow: var(--shadow-sm);
+  min-height: 132px;
+  transition: transform 0.1s ease;
+}
+
+.tile:active {
+  transform: scale(0.99);
+}
+
+.tile__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tile__tier {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--red-dim);
+  border: 1px solid rgba(141, 47, 32, 0.35);
+  border-radius: 999px;
+  padding: 2px 7px;
+}
+
+.tile__name {
+  font-family: var(--serif);
+  font-size: 20px;
+  line-height: 1.1;
+}
+
+.tile__blurb {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--paper-faded);
+  flex: 1;
+}
+
+.tile__foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-top: 1px solid rgba(34, 28, 21, 0.15);
+  padding-top: 7px;
+}
+
+.tile__value {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: #7a5c14;
+}
+
+.tile__district {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--paper-faded);
+}
+
+.city-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}

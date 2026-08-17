@@ -1,0 +1,148 @@
+/* Polaroids on a corkboard. The photo is a monogram rather than art, which is
+ * a deliberate stylistic choice — generated portraits would look worse than a
+ * good typographic frame, and the crew are described in words anyway. */
+
+.crew-card {
+  display: flex;
+  gap: 12px;
+  padding: 10px;
+  background: var(--paper);
+  color: var(--paper-ink);
+  border-radius: 2px;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.crew-card--on {
+  outline: 2px solid var(--red);
+  outline-offset: 1px;
+  box-shadow: 0 6px 22px rgba(200, 69, 47, 0.28);
+}
+
+.crew-card--off {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+}
+
+.crew-card[role='button'] {
+  cursor: pointer;
+}
+
+.crew-card[role='button']:active {
+  transform: scale(0.985);
+}
+
+.crew-card__photo {
+  width: 66px;
+  flex: 0 0 66px;
+  background: linear-gradient(160deg, #2c2620, #191512);
+  border-radius: 1px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 4px;
+  align-self: flex-start;
+  min-height: 78px;
+}
+
+.crew-card__initials {
+  font-family: var(--serif);
+  font-size: 24px;
+  color: var(--paper-2);
+  letter-spacing: 0.04em;
+}
+
+.crew-card__exp {
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+}
+
+.crew-card__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.crew-card__name {
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.15;
+}
+
+.crew-card__role {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--paper-faded);
+}
+
+.crew-card__stats {
+  display: flex;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.crew-card__stat {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.crew-card__stat-label {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--paper-faded);
+}
+
+.crew-card__stat-value {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.crew-card__traits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.crew-card__traits .tag {
+  border-color: rgba(34, 28, 21, 0.25);
+  color: var(--paper-faded);
+  font-size: 9px;
+}
+
+.crew-card__check {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+}
+
+.crew-card__foot {
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--paper-faded);
+}
+
+.stars {
+  color: var(--gold);
+  letter-spacing: 2px;
+}
