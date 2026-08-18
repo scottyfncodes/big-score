@@ -9,7 +9,8 @@ import {
   purchaseIntel,
   scout,
   scoutPasses,
-  targetUnderHeat,
+  targetAsFound,
+  targetHits,
 } from '../game/campaign';
 import { SOURCES, intelCost, scoutCostFor, scoutedSecurity } from '../game/intel';
 import { useStore } from '../state/store';
@@ -31,14 +32,15 @@ export function TargetBoard() {
   const [buying, setBuying] = useState<IntelTopic | undefined>();
 
   const passes = target ? scoutPasses(c, target.id) : 0;
+  const hits = target ? targetHits(c, target.id) : { count: 0, lastDay: 0 };
   const crew = activeCrew(c);
   const held = target ? heldIntel(c, target.id) : [];
   const heldIds = new Set(held.map((i) => i.topicId));
 
-  const hot = useMemo(
-    () => (target ? targetUnderHeat(target, c.heat) : undefined),
-    [target, c.heat],
-  );
+  // The dossier shows the building as the crew will actually find it: Heat and
+  // everything the last robbery taught the owners, not the numbers from the
+  // brochure.
+  const hot = useMemo(() => (target ? targetAsFound(c, target) : undefined), [c, target]);
   const estimate = useMemo(
     () => (hot ? scoutedSecurity(hot, passes, crew) : undefined),
     [hot, passes, crew],
@@ -68,8 +70,17 @@ export function TargetBoard() {
             </div>
             <p className="dossier__blurb">{target.blurb}</p>
             <div className="dossier__value">
-              <span className="eyebrow eyebrow--paper">Headline value</span>
-              <strong>{money(target.value)}</strong>
+              <span className="eyebrow eyebrow--paper">
+                {hits.count > 0 ? 'What is left in there' : 'Headline value'}
+              </span>
+              <strong>{money(hot.value)}</strong>
+              {hits.count > 0 ? (
+                <span className="dossier__hit">
+                  You have robbed this {hits.count === 1 ? 'once' : `${hits.count} times`}. It was
+                  worth {money(target.value)}; what is left grows back over the weeks, and the
+                  security has not stood still either.
+                </span>
+              ) : null}
             </div>
             {passes > 0 ? (
               <p className="dossier__weakness">
@@ -153,7 +164,8 @@ export function TargetBoard() {
             </div>
             <p className="faint intel__note">
               A source sells what it has. Cheap information is confident and often wrong,
-              and you will only find out which on the night.
+              and you will only find out which on the night. None of it survives the job —
+              rotations change, and an inside man does not stay inside.
             </p>
           </div>
 

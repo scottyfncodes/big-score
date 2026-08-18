@@ -418,6 +418,8 @@ export interface Campaign {
   ownedEquipment: string[];
   intel: Record<string, Intel[]>;
   scouted: Record<string, number>;
+  /** How many times each target has been robbed, and when it was last hit. */
+  hits: Record<string, { count: number; lastDay: number }>;
   completed: string[];
   news: NewsStory[];
   reports: HeistResult[];

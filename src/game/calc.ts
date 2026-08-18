@@ -37,7 +37,14 @@ export interface Plan {
 }
 
 export const CREW_MIN = 2;
-export const CREW_SOFT_MAX = 5;
+/**
+ * Four. Headless campaigns showed a crew of five strictly dominating three and
+ * four — the cut alone was a tax the player simply paid, not a decision they
+ * made — so the friction starts one body earlier, and crew size now costs Heat
+ * as well as money. Five is still the right answer for a big job; it should
+ * just cost something to say so.
+ */
+export const CREW_SOFT_MAX = 4;
 /** Peak of the roll applied to every stage check. */
 export const SWING = 22;
 
@@ -291,6 +298,37 @@ export function calculateSuccessChance(plan: Plan): number {
   return clamp(Math.round(p * 100), 1, 99);
 }
 
+/**
+ * The second number, and the one that stops the first from being useless.
+ *
+ * `calculateSuccessChance` is the product of six stages going to plan, so it
+ * saturates near 1% and a long shot becomes indistinguishable from suicide.
+ * This asks a different and much flatter question: does everyone get out with
+ * something? A messy job still pays and still comes home, and the whole design
+ * rests on failure being interesting rather than terminal — so the player is
+ * owed a read on it before they commit.
+ */
+export function calculateGetawayChance(plan: Plan): number {
+  if (plan.crew.length === 0) return 0;
+  let p = 1;
+  for (const profile of STAGE_LIST) {
+    const { score } = stageScore(plan, profile.id);
+    const opposition = stageOpposition(plan, profile.id, true);
+    // Anything above an outright collapse still ends with a van and a bag.
+    p *= pAtLeast(score - opposition - OUTCOME_BANDS.complication);
+  }
+  return clamp(Math.round(p * 100), 3, 99);
+}
+
+/** A word for the shape of the plan, because a percentage alone is not one. */
+export function planVerdict(hold: number, getaway: number): string {
+  if (hold >= 75) return 'Routine';
+  if (hold >= 45) return 'Workable';
+  if (hold >= 20) return 'Rough';
+  if (getaway >= 60) return 'Long shot';
+  return 'Suicide';
+}
+
 /** Per-stage odds, for the weak-point readout on the planning board. */
 export function stageOdds(plan: Plan): {
   stage: StageId;
@@ -305,9 +343,10 @@ export function stageOdds(plan: Plan): {
     return {
       stage: profile.id,
       margin: Math.round(margin),
-      // Never show a certainty. A stage at 100% next to a plan at 61% reads as
-      // a broken number, and no stage is ever actually safe.
-      chance: Math.min(99, Math.round(pAtLeast(margin - OUTCOME_BANDS.partial) * 100)),
+      // Never show a certainty in either direction. 100% next to a plan that
+      // reads 61% looks broken, and 0% claims a stage is impossible when the
+      // engine guarantees no stage ever is — the roll can always surprise you.
+      chance: clamp(Math.round(pAtLeast(margin - OUTCOME_BANDS.partial) * 100), 1, 99),
       attr,
       actorId,
     };
@@ -335,6 +374,10 @@ export function calculateHeat(plan: Plan): number {
   let heat = plan.approach.heatBase;
   heat += plan.equipment.reduce((sum, e) => sum + (e.heat ?? 0), 0);
   heat += Math.round(plan.target.tier * 2);
+  // Every extra body is another face, another car, another person who was
+  // somewhere they cannot explain. Big crews are louder to the city, not just
+  // dearer to pay.
+  heat += Math.max(0, plan.crew.length - 3) * 3;
   return heat;
 }
 
@@ -356,6 +399,8 @@ export function calculateComplicationChance(plan: Plan): number {
 
 export interface PlanAnalysis {
   successChance: number;
+  getawayChance: number;
+  verdict: string;
   expectedTake: number;
   heat: number;
   upfrontCost: number;
@@ -400,8 +445,12 @@ export function analysePlan(plan: Plan): PlanAnalysis {
     ? `${weakName} is the thin part of this plan. Better kit or better intel would hold it.`
     : `${weakName} is the thin part of this plan, and you have no ${weakRole}.`;
 
+  const getawayChance = calculateGetawayChance(plan);
+
   return {
     successChance,
+    getawayChance,
+    verdict: planVerdict(successChance, getawayChance),
     expectedTake: calculateExpectedTake(plan),
     heat: calculateHeat(plan),
     upfrontCost: plan.crew.reduce((sum, m) => sum + m.cost, 0),

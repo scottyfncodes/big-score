@@ -10,6 +10,7 @@ import {
   hireCost,
   lieLow,
   newCampaign,
+  PASSIVE_DECAY_PER_DAY,
   planFor,
   purchaseIntel,
   scout,
@@ -104,7 +105,8 @@ describe('campaign', () => {
     const before = c.bankroll;
     c = completeHeist(c, run, plan);
     expect(c.bankroll).toBe(before + run.outcome!.net);
-    expect(c.heat).toBe(run.outcome!.heat);
+    // The job costs two days, and Heat fades on the days that pass.
+    expect(c.heat).toBe(Math.max(0, run.outcome!.heat - 2 * PASSIVE_DECAY_PER_DAY));
     expect(c.news).toHaveLength(1);
     expect(c.news[0].headline.length).toBeGreaterThan(5);
     expect(c.day).toBeGreaterThan(1);

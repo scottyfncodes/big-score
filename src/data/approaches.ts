@@ -60,8 +60,12 @@ export const APPROACHES: Record<ApproachId, Approach> = {
     id: 'inside',
     name: 'Inside Job',
     blurb: 'Someone in there is already on the payroll. Yours.',
+    // Softened after a headless campaign cracked the tier 3 casino at a
+    // reported 99%: the approach multipliers were stacking with the insider
+    // intel that unlocks the approach in the first place. It should still be
+    // the best way in when you can buy the name — just not a formality.
     attrFor: { approach: 'social', entry: 'social' },
-    oppositionMul: { approach: 0.6, entry: 0.55, security: 0.8, objective: 0.85 },
+    oppositionMul: { approach: 0.72, entry: 0.68, security: 0.85, objective: 0.9 },
     timeMul: 0.85,
     noiseMul: 0.55,
     heatBase: 6,

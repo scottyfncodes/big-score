@@ -50,11 +50,26 @@ export function PlanningBoard() {
         <div className="board">
           <div className="board__col">
             <div className="readout paper">
-              <div className="eyebrow eyebrow--paper">The plan holds</div>
-              <div className="readout__pct">{analysis.successChance}%</div>
+              <div className="spread">
+                <div className="eyebrow eyebrow--paper">The plan holds</div>
+                <span className={`verdict-chip verdict-chip--${analysis.verdict.toLowerCase().replace(' ', '-')}`}>
+                  {analysis.verdict}
+                </span>
+              </div>
+              <div className="readout__pair">
+                <div>
+                  <div className="readout__pct">{analysis.successChance}%</div>
+                  <span className="eyebrow eyebrow--paper">Goes to plan</span>
+                </div>
+                <div>
+                  <div className="readout__pct readout__pct--soft">{analysis.getawayChance}%</div>
+                  <span className="eyebrow eyebrow--paper">Everyone comes home</span>
+                </div>
+              </div>
               <p className="readout__caption">
-                Chance every stage goes the way it is drawn. It is calculated from what you
-                believe, not from what is true.
+                The first is every stage going the way it is drawn. The second is walking away
+                with something and nobody in a cell — a messy night still pays. Both are
+                calculated from what you believe, not from what is true.
               </p>
               <div className="readout__grid">
                 <div>

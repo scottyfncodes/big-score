@@ -73,10 +73,18 @@ function reducer(state: State, action: Action): State {
     case 'DRAFT':
       return { ...state, draft: { ...state.draft, ...action.draft } };
     case 'SELECT_TARGET':
+      // Crew and kit are campaign-level things the player already chose, so
+      // they carry across jobs; only the approach is specific to this target.
+      // Clearing them meant re-picking the whole crew for every job, which over
+      // a fifteen-job campaign is just typing.
       return {
         ...state,
         screen: 'target',
-        draft: { ...emptyDraft, targetId: action.targetId },
+        draft: {
+          ...state.draft,
+          targetId: action.targetId,
+          approachId: undefined,
+        },
       };
     case 'TOGGLE_CREW': {
       const has = state.draft.crewIds.includes(action.id);

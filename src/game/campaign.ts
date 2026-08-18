@@ -26,7 +26,7 @@ import type {
  * exists, which is what lets the whole progression be tested in a terminal.
  */
 
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 export const STARTING_BANKROLL = 50000;
 
 export const HEAT_TIERS = [
@@ -54,6 +54,7 @@ export function newCampaign(seed: number, handle: string): Campaign {
     ownedEquipment: [],
     intel: {},
     scouted: {},
+    hits: {},
     completed: [],
     news: [],
     reports: [],
@@ -65,11 +66,97 @@ export function newCampaign(seed: number, handle: string): Campaign {
  * Heat is not a health bar; it is the city paying attention. It makes every
  * building harder and every professional more expensive, and it is the reason
  * a run of loud successes eventually has to stop.
+ *
+ * The curve is deliberately convex. A linear multiplier meant that a player
+ * sitting at 89 Heat — a manhunt, in fiction — was running 99% jobs, because
+ * a flat +36% security was cancelled out by one piece of intel. Gentle below
+ * 40, punishing above 70, which is the shape the fiction already claimed.
  */
 export function heatSecurityMultiplier(heat: number): number {
-  return 1 + heat / 250;
+  return 1 + Math.pow(heat / 100, 1.5) * 0.75;
 }
 
+/**
+ * Heat fades on its own, because attention does. Without this the campaign has
+ * no valve at all: Heat only ever went up between jobs, so a headless campaign
+ * pinned at 100 by job ten and every building in the city became unopenable.
+ * Days are the currency that buys it back, and days are what scouting, laying
+ * low and the jobs themselves all spend.
+ */
+export const PASSIVE_DECAY_PER_DAY = 1.5;
+
+export function advanceDays(campaign: Campaign, days: number): Campaign {
+  return {
+    ...campaign,
+    day: campaign.day + days,
+    heat: Math.max(0, Math.round(campaign.heat - days * PASSIVE_DECAY_PER_DAY)),
+  };
+}
+
+/**
+ * What a target is worth on its Nth robbery.
+ *
+ * A jeweller that has been done eight times does not still have the same
+ * safe. Without this the optimal campaign is one target on repeat, which is
+ * exactly what the first headless campaign run did: eight consecutive jobs on
+ * the same shop, then seven on the same gallery. Value collapses on a hit and
+ * recovers over weeks, so the city — and the tier ladder — is the thing that
+ * keeps a campaign moving.
+ */
+export const HIT_VALUE_FLOOR = 0.12;
+export const HIT_RECOVERY_PER_DAY = 0.02;
+
+export function targetHits(campaign: Campaign, targetId: string) {
+  return campaign.hits?.[targetId] ?? { count: 0, lastDay: 0 };
+}
+
+export function targetValueMultiplier(campaign: Campaign, targetId: string): number {
+  const { count, lastDay } = targetHits(campaign, targetId);
+  if (count === 0) return 1;
+  const emptied = Math.pow(0.35, count);
+  const recovered = emptied + (campaign.day - lastDay) * HIT_RECOVERY_PER_DAY;
+  return Math.max(HIT_VALUE_FLOOR, Math.min(1, recovered));
+}
+
+/**
+ * Somebody fixes the thing you exploited. Every hit hardens the building —
+ * but only so far. There is a limit to what a jeweller can install, and
+ * uncapped hardening stacked on top of Heat turned a corner shop into
+ * something harder than the casino.
+ */
+export const MAX_HARDENING_HITS = 3;
+
+export function targetHardening(campaign: Campaign, targetId: string): number {
+  return 1 + Math.min(targetHits(campaign, targetId).count, MAX_HARDENING_HITS) * 0.13;
+}
+
+/**
+ * Heat and hardening are separate pressures and they must not multiply away.
+ * The cap is the promise that no job is ever arithmetically impossible — a
+ * plan can be a terrible idea, but it always has to be an idea.
+ */
+export const MAX_SECURITY_MULTIPLIER = 1.9;
+
+/** The target as the crew will actually find it: Heat, plus its own history. */
+export function targetAsFound(campaign: Campaign, target: Target): Target {
+  const mul = Math.min(
+    MAX_SECURITY_MULTIPLIER,
+    heatSecurityMultiplier(campaign.heat) * targetHardening(campaign, target.id),
+  );
+  return {
+    ...target,
+    value: Math.round(target.value * targetValueMultiplier(campaign, target.id)),
+    security: {
+      guards: Math.min(99, Math.round(target.security.guards * mul)),
+      cameras: Math.min(99, Math.round(target.security.cameras * mul)),
+      alarm: Math.min(99, Math.round(target.security.alarm * mul)),
+      accessControl: Math.min(99, Math.round(target.security.accessControl * mul)),
+      responseTime: Math.max(120, Math.round(target.security.responseTime / mul)),
+    },
+  };
+}
+
+/** Kept for tests and callers that only want the Heat half of the picture. */
 export function targetUnderHeat(target: Target, heat: number): Target {
   const mul = heatSecurityMultiplier(heat);
   return {
@@ -79,7 +166,7 @@ export function targetUnderHeat(target: Target, heat: number): Target {
       cameras: Math.min(99, Math.round(target.security.cameras * mul)),
       alarm: Math.min(99, Math.round(target.security.alarm * mul)),
       accessControl: Math.min(99, Math.round(target.security.accessControl * mul)),
-      responseTime: Math.round(target.security.responseTime / mul),
+      responseTime: Math.max(120, Math.round(target.security.responseTime / mul)),
     },
   };
 }
@@ -174,11 +261,10 @@ export function scoutPasses(campaign: Campaign, targetId: string): number {
 
 export function scout(campaign: Campaign, targetId: string, cost: number): Campaign {
   if (campaign.bankroll < cost) return campaign;
+  const next = advanceDays(campaign, 1);
   return {
-    ...campaign,
-    bankroll: campaign.bankroll - cost,
-    day: campaign.day + 1,
-    heat: Math.max(0, campaign.heat - 2),
+    ...next,
+    bankroll: next.bankroll - cost,
     scouted: { ...campaign.scouted, [targetId]: scoutPasses(campaign, targetId) + 1 },
   };
 }
@@ -231,7 +317,7 @@ export function planFor(
   if (!target) return undefined;
   const crew = activeCrew(campaign).filter((m) => crewIds.includes(m.id));
   return {
-    target: targetUnderHeat(target, campaign.heat),
+    target: targetAsFound(campaign, target),
     approach: APPROACHES[approachId],
     crew,
     equipment: ownedEquipment(campaign).filter((e) => equipmentIds.includes(e.id)),
@@ -284,12 +370,27 @@ export function completeHeist(campaign: Campaign, run: RunState, plan: Plan): Ca
   });
 
   const day = campaign.day + 2;
+
+  // Intel about a target does not survive robbing it. The rotation changes,
+  // the inside man is questioned or resigns, the locks are replaced. Keeping
+  // it made the Inside Job a permanent 99% on any target you had ever bought
+  // an insider for; discarding it puts the intel decision back on every run.
+  const intel = { ...campaign.intel };
+  delete intel[plan.target.id];
+
+  const previous = targetHits(campaign, plan.target.id);
+
   return {
     ...campaign,
     day,
     bankroll: campaign.bankroll + result.net,
-    heat: Math.min(100, campaign.heat + result.heat),
+    heat: Math.max(0, Math.min(100, campaign.heat + result.heat - 2 * PASSIVE_DECAY_PER_DAY)),
     score: campaign.score + result.gross,
+    intel,
+    hits: {
+      ...campaign.hits,
+      [plan.target.id]: { count: previous.count + 1, lastDay: day },
+    },
     crew,
     market: generateMarket(
       campaign.seed,
@@ -307,14 +408,23 @@ export function completeHeist(campaign: Campaign, run: RunState, plan: Plan): Ca
 }
 
 export const LIE_LOW_DAYS = 3;
-export const LIE_LOW_HEAT = 14;
+export const LIE_LOW_BASE = 10;
+
+/**
+ * Relief scales with the Heat it is relieving. A flat number meant that at 90
+ * Heat — the point where the player most needs a way back — three days bought
+ * almost nothing, and the campaign had no recovery from a bad run of jobs.
+ */
+export function lieLowRelief(heat: number): number {
+  return Math.round(LIE_LOW_BASE + heat * 0.15 + LIE_LOW_DAYS * PASSIVE_DECAY_PER_DAY);
+}
 
 export function lieLow(campaign: Campaign): Campaign {
   const day = campaign.day + LIE_LOW_DAYS;
   return {
     ...campaign,
     day,
-    heat: Math.max(0, campaign.heat - LIE_LOW_HEAT),
+    heat: Math.max(0, campaign.heat - lieLowRelief(campaign.heat)),
     market: generateMarket(
       campaign.seed,
       day,
@@ -339,11 +449,11 @@ export const EVIDENCE_HEAT = 18;
 /** Money straight into the fire, in exchange for a quieter city. */
 export function destroyEvidence(campaign: Campaign): Campaign {
   if (campaign.bankroll < EVIDENCE_COST) return campaign;
+  const next = advanceDays(campaign, 1);
   return {
-    ...campaign,
-    bankroll: campaign.bankroll - EVIDENCE_COST,
-    day: campaign.day + 1,
-    heat: Math.max(0, campaign.heat - EVIDENCE_HEAT),
+    ...next,
+    bankroll: next.bankroll - EVIDENCE_COST,
+    heat: Math.max(0, next.heat - EVIDENCE_HEAT),
   };
 }
 

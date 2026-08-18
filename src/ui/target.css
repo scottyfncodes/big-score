@@ -48,6 +48,13 @@
   color: #7a5c14;
 }
 
+.dossier__hit {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--red-dim);
+  margin-top: 6px;
+}
+
 .dossier__weakness {
   margin: 12px 0 0;
   padding: 10px;

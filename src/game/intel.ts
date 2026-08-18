@@ -4,6 +4,11 @@ import type { CrewMember, Intel, IntelSource, IntelTopic, Security, Target } fro
 /**
  * Buying information.
  *
+ * Prices were cut after headless campaigns showed a competent player was
+ * better off buying nothing: intel bought materially cleaner jobs and lower
+ * Heat, but cost more than the cleanliness returned. A system that the optimal
+ * player skips is not a decision, it is a trap.
+ *
  * The design rule that makes this system worth having: false intel must read
  * exactly like true intel, but it must never be a silent tax. A lie is bought
  * from a *source*, the source has a reliability the player can learn across a
@@ -18,19 +23,19 @@ export const SOURCES: IntelSource[] = [
     id: 'ledger',
     name: 'The Ledger',
     reliability: 88,
-    costMul: 1.6,
+    costMul: 1.25,
   },
   {
     id: 'pawn',
     name: 'Danko’s Pawn',
     reliability: 66,
-    costMul: 1,
+    costMul: 0.8,
   },
   {
     id: 'street',
     name: 'Street talk',
     reliability: 42,
-    costMul: 0.55,
+    costMul: 0.45,
   },
 ];
 

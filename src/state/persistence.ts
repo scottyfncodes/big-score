@@ -46,11 +46,22 @@ export function hasSave(): boolean {
   }
 }
 
-/** Bring an older save forward. Returns undefined if it cannot be salvaged. */
+/**
+ * Bring an older save forward, one version at a time so the steps compose.
+ * Returns undefined only if the save is from the future or unreadable.
+ */
 function migrate(save: Campaign): Campaign | undefined {
   if (!save || typeof save.version !== 'number') return undefined;
   if (save.version > SAVE_VERSION) return undefined;
-  // v1 is the first schema. Migrations land here as fields change, each one
-  // stepping a single version so they compose.
-  return { ...save, version: SAVE_VERSION };
+
+  let next = save;
+
+  // v1 -> v2: targets deplete when robbed, so every save needs a hit ledger.
+  // An existing campaign starts with a clean one; nothing it did before the
+  // upgrade counts against it.
+  if (next.version < 2) {
+    next = { ...next, hits: next.hits ?? {}, version: 2 };
+  }
+
+  return { ...next, version: SAVE_VERSION };
 }

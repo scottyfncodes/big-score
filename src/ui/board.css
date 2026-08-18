@@ -21,14 +21,44 @@
   padding: 18px;
 }
 
+.readout__pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 6px 0 12px;
+  position: relative;
+  z-index: 1;
+}
+
 .readout__pct {
   font-family: var(--mono);
-  font-size: 52px;
+  font-size: clamp(34px, 9vw, 46px);
   line-height: 1;
   font-weight: 700;
   color: var(--paper-ink);
-  margin: 4px 0 2px;
+  margin: 0 0 2px;
 }
+
+.readout__pct--soft {
+  color: #7a5c14;
+}
+
+.verdict-chip {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  position: relative;
+  z-index: 1;
+}
+
+.verdict-chip--routine { color: #4c7a3d; }
+.verdict-chip--workable { color: #6b5f4c; }
+.verdict-chip--rough { color: #a3721c; }
+.verdict-chip--long-shot { color: #b4571f; }
+.verdict-chip--suicide { color: var(--red-dim); }
 
 .readout__caption {
   margin: 0 0 14px;

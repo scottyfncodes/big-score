@@ -51,6 +51,13 @@ lie can be a lie rather than a dead purchase.
 Running the Inside Job without an inside man is a bad idea you are allowed to
 have. "Can I make this work anyway" has to remain answerable.
 
+**The city is the progression, not the target.** A building you have robbed is
+worth a fraction of what it was and has better locks than it did; what is left
+grows back over weeks. Intel does not survive the job it was bought for — the
+rotation changes and the inside man does not stay inside. Together those mean
+the correct play is always to move on, which is what the districts and the tier
+ladder are for.
+
 ## Layout
 
 ```
@@ -85,6 +92,7 @@ made an hour later. A bug report is a seed.
 
 ## Balance is asserted, not eyeballed
 
+
 `src/game/balance.test.ts` simulates hundreds of runs per configuration and
 fails if the shape of the game changes. `npm run sim` prints the table:
 
@@ -99,6 +107,27 @@ That last row is not a bug. Going through the front door of a bank two hundred
 metres from a police station is supposed to be close to suicide; the aggressive
 approach earns its keep on soft targets with long response times, where it
 returns a reliable score and an enormous Heat bill.
+
+`campaignSim.ts` plays whole campaigns headlessly under a policy, which is the
+only way to see the problems that take a dozen jobs to appear. Its first run
+produced a campaign that robbed the same jeweller eight times in a row at a
+reported 99%, then the same gallery seven times, finishing on $2.6M with Heat
+pinned at 96 and no consequence attached to either. Everything in
+`progression.test.ts` exists because that run, or the over-corrected version
+that followed it, went wrong in a specific way:
+
+| Question | Answer, measured over ~600 simulated jobs |
+| --- | --- |
+| Does covering the plan's weak stage matter? | Yes — about 39% more bankroll than hiring the cheapest body |
+| Is a bigger crew simply better? | No. Four is the peak; three and five are both worse, six is much worse |
+| Does buying intel pay? | Yes, at a modest budget — it beats buying none on both money and outcomes, and over-buying costs |
+| Does managing Heat pay? | Yes — laying low above 40 roughly doubles the bankroll of never laying low |
+
+The crew-size and intel answers were both *no* the first time they were asked.
+The cut was a tax the player simply paid rather than a decision they made, and
+intel bought cleaner jobs while losing money overall — a system the optimal
+player skips is a trap, not a choice. Both were repriced until the curve had a
+peak in the middle.
 
 ## Content
 

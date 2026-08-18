@@ -7,11 +7,13 @@ import {
   heatTier,
   lieLow,
   nextUnlock,
+  targetHits,
+  targetValueMultiplier,
   unlockedDistricts,
 } from '../game/campaign';
 import { useStore } from '../state/store';
 import { Hud, Sheet, money, shortMoney } from './parts';
-import type { Target } from '../game/types';
+import type { Campaign, Target } from '../game/types';
 
 export function CityMap() {
   const { campaign, dispatch, update } = useStore();
@@ -97,7 +99,12 @@ export function CityMap() {
 
           <div className="grid">
             {targets.map((t) => (
-              <TargetTile key={t.id} target={t} onOpen={() => dispatch({ type: 'SELECT_TARGET', targetId: t.id })} />
+              <TargetTile
+                key={t.id}
+                target={t}
+                campaign={c}
+                onOpen={() => dispatch({ type: 'SELECT_TARGET', targetId: t.id })}
+              />
             ))}
           </div>
 
@@ -128,6 +135,7 @@ export function CityMap() {
                 <TargetTile
                   key={t.id}
                   target={t}
+                  campaign={c}
                   onOpen={() => {
                     setOpenDistrict(undefined);
                     dispatch({ type: 'SELECT_TARGET', targetId: t.id });
@@ -176,7 +184,23 @@ export function CityMap() {
   );
 }
 
-function TargetTile({ target, onOpen }: { target: Target; onOpen: () => void }) {
+function TargetTile({
+  target,
+  campaign,
+  onOpen,
+}: {
+  target: Target;
+  campaign: Campaign;
+  onOpen: () => void;
+}) {
+  // A target the player has already robbed is worth less and is better
+  // defended. That has to be legible on the tile, or a shrinking number reads
+  // as a bug rather than a consequence.
+  const multiplier = targetValueMultiplier(campaign, target.id);
+  const hits = targetHits(campaign, target.id);
+  const value = Math.round(target.value * multiplier);
+  const depleted = multiplier < 0.95;
+
   return (
     <button className="tile" onClick={onOpen}>
       <div className="tile__top">
@@ -185,8 +209,17 @@ function TargetTile({ target, onOpen }: { target: Target; onOpen: () => void }) 
       </div>
       <div className="tile__name">{target.name}</div>
       <div className="tile__blurb">{target.blurb}</div>
+      {depleted ? (
+        <div className="tile__hit">
+          Robbed {hits.count === 1 ? 'once' : `${hits.count} times`} · what is left is
+          growing back slowly, and they have improved the locks
+        </div>
+      ) : null}
       <div className="tile__foot">
-        <span className="tile__value">{money(target.value)}</span>
+        <span className={`tile__value${depleted ? ' tile__value--down' : ''}`}>
+          {money(value)}
+          {depleted ? <s className="tile__was">{money(target.value)}</s> : null}
+        </span>
         <span className="tile__district">{districtById(target.districtId)?.name}</span>
       </div>
     </button>
