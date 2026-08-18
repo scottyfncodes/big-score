@@ -9,12 +9,16 @@ No backend, no accounts, no build-time services. React + TypeScript + Vite,
 hand-written CSS, two runtime dependencies (`react`, `react-dom`), and a save
 in `localStorage`.
 
+**Play it:** <https://scottyfncodes.github.io/big-score/> (or open `docs/index.html`
+from a clone — it is one self-contained file and needs no server).
+
 ```bash
 npm install
 npm run dev        # play it
 npm test           # engine + balance + content suites
 npm run sim        # print the balance distribution table
 npm run build      # static output in dist/
+npm run build:single  # one self-contained HTML file, into docs/ and dist-single/
 ```
 
 ## The design the code is built around

@@ -30,7 +30,26 @@ ${js}
 </script>
 `;
 
-const out = new URL('../dist-single/index.html', import.meta.url).pathname;
-mkdirSync(dirname(out), { recursive: true });
-writeFileSync(out, page);
-console.log(`wrote ${out} (${(page.length / 1024).toFixed(0)} kB)`);
+for (const rel of ['../dist-single/index.html', '../docs/index.html']) {
+  const out = new URL(rel, import.meta.url).pathname;
+  mkdirSync(dirname(out), { recursive: true });
+  writeFileSync(out, out.endsWith('docs/index.html') ? standalone(page) : page);
+  console.log(`wrote ${out} (${(page.length / 1024).toFixed(0)} kB)`);
+}
+
+/**
+ * `docs/` is served as a normal web page rather than embedded in a host that
+ * supplies the document shell, so that copy needs its own wrapper.
+ */
+function standalone(body) {
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2314110F'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23D9A441' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23C8452F'/%3E%3C/svg%3E" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="description" content="A browser-based heist strategy game. Recruit a crew, buy what you can afford to know, and run a six-stage job that will not go the way you drew it." />
+${body}</body>
+</html>
+`.replace('<div id="root"></div>', '</head>\n<body>\n<div id="root"></div>');
+}
