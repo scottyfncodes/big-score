@@ -198,3 +198,40 @@
   margin-top: 3px;
   max-width: 40ch;
 }
+
+.need {
+  border: 1px solid var(--board-line);
+  border-left: 2px solid var(--red-dim);
+  border-radius: var(--radius);
+  padding: 10px;
+}
+
+.need--ok {
+  border-left-color: var(--green);
+  background: rgba(111, 155, 95, 0.06);
+}
+
+.need__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.need__what {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.need__note {
+  margin: 6px 0 4px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.need__stage {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}

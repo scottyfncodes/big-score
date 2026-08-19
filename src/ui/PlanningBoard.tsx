@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { STAGE_PROFILES } from '../game/stages';
+import { TAG_LABELS } from '../data/equipment';
 import { analysePlan, stageOdds } from '../game/calc';
 import { activeCrew, ownedEquipment, planFor } from '../game/campaign';
 import { useStore } from '../state/store';
@@ -16,7 +17,7 @@ import { STAGE_ORDER } from '../game/types';
  * really choosing is who is in the room.
  */
 export function PlanningBoard() {
-  const { campaign, draft, dispatch, beginHeist } = useStore();
+  const { campaign, screen, draft, dispatch, beginHeist } = useStore();
   const c = campaign!;
   const [picker, setPicker] = useState<'crew' | 'kit' | undefined>();
 
@@ -45,6 +46,7 @@ export function PlanningBoard() {
         bankroll={c.bankroll}
         heat={c.heat}
         day={c.day}
+        nav={{ screen, go: (next) => dispatch({ type: 'SCREEN', screen: next }) }}
       />
       <div className="screen screen--wide">
         <div className="board">
@@ -149,6 +151,38 @@ export function PlanningBoard() {
                   ))}
                 </div>
               )}
+            </div>
+
+            <div className="panel">
+              <div className="spread">
+                <div className="eyebrow">Equipment this job asks for</div>
+                <button className="btn btn--sm" onClick={() => dispatch({ type: 'SCREEN', screen: 'kit' })}>
+                  Buy kit
+                </button>
+              </div>
+              <div className="stack" style={{ gap: 6, marginTop: 10 }}>
+                {analysis.kit.length === 0 ? (
+                  <p className="faint" style={{ fontSize: 13, margin: 0 }}>
+                    Nothing specific. Whatever you bring is a bonus.
+                  </p>
+                ) : (
+                  analysis.kit.map((need) => (
+                    <div
+                      key={`${need.tag}-${need.stage}`}
+                      className={`kitrow${need.covered ? ' kitrow--ok' : need.critical ? ' kitrow--bad' : ''}`}
+                    >
+                      <span className="kitrow__mark">{need.covered ? '✓' : need.critical ? '!' : '–'}</span>
+                      <span className="kitrow__what">
+                        {TAG_LABELS[need.tag]}
+                        <span className="faint"> · {STAGE_PROFILES[need.stage].name}</span>
+                      </span>
+                      <span className="kitrow__have faint">
+                        {need.carrying ?? (need.critical ? 'nothing' : '—')}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
 
             {analysis.warnings.length ? (

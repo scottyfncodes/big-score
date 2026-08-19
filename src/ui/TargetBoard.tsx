@@ -7,6 +7,7 @@ import {
   approachesFor,
   heldIntel,
   purchaseIntel,
+  ownedEquipment,
   scout,
   scoutPasses,
   targetAsFound,
@@ -15,6 +16,8 @@ import {
 import { SOURCES, intelCost, scoutCostFor, scoutedSecurity } from '../game/intel';
 import { useStore } from '../state/store';
 import { Hud, Sheet, money } from './parts';
+import { STAGE_PROFILES } from '../game/stages';
+import { TAG_LABELS } from '../data/equipment';
 import type { IntelTopic, Security } from '../game/types';
 
 const SECURITY_LABELS: Record<keyof Security, string> = {
@@ -26,7 +29,7 @@ const SECURITY_LABELS: Record<keyof Security, string> = {
 };
 
 export function TargetBoard() {
-  const { campaign, draft, dispatch, update } = useStore();
+  const { campaign, screen, draft, dispatch, update } = useStore();
   const c = campaign!;
   const target = targetById(draft.targetId ?? '');
   const [buying, setBuying] = useState<IntelTopic | undefined>();
@@ -49,6 +52,7 @@ export function TargetBoard() {
   if (!target || !hot || !estimate) return null;
 
   const scoutCost = scoutCostFor(target, passes);
+  const owned = ownedEquipment(c);
   const approaches = approachesFor(c, target);
 
   return (
@@ -59,6 +63,7 @@ export function TargetBoard() {
         bankroll={c.bankroll}
         heat={c.heat}
         day={c.day}
+        nav={{ screen, go: (next) => dispatch({ type: 'SCREEN', screen: next }) }}
       />
       <div className="screen">
         <div className="stack">
@@ -88,6 +93,68 @@ export function TargetBoard() {
                 {target.weakness}
               </p>
             ) : null}
+          </div>
+
+          <div className="panel">
+            <div className="eyebrow" style={{ marginBottom: 8 }}>
+              Approach
+            </div>
+            <div className="stack">
+              {target.approaches.map((id) => {
+                const approach = APPROACHES[id];
+                const locked = !approaches.includes(id);
+                return (
+                  <button
+                    key={id}
+                    className={`approach${draft.approachId === id ? ' approach--on' : ''}${locked ? ' approach--locked' : ''}`}
+                    disabled={locked}
+                    onClick={() => dispatch({ type: 'DRAFT', draft: { approachId: id } })}
+                  >
+                    <div className="approach__name">{approach.name}</div>
+                    <div className="approach__blurb">
+                      {locked ? 'Needs a name on the inside — buy the intel first.' : approach.blurb}
+                    </div>
+                    <div className="approach__tags">
+                      <span className="tag">+{approach.heatBase} heat</span>
+                      {approach.keyRoles.map((role) => (
+                        <span key={role} className="tag">
+                          {role}
+                        </span>
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="panel">
+            <div className="eyebrow" style={{ marginBottom: 8 }}>
+              What this job needs
+            </div>
+            <div className="stack" style={{ gap: 8 }}>
+              {target.needs.map((need) => {
+                const carrying = owned.find((e) => e.tag === need.tag);
+                return (
+                  <div key={`${need.tag}-${need.stage}`} className={`need${carrying ? ' need--ok' : ''}`}>
+                    <div className="need__head">
+                      <span className="need__what">{TAG_LABELS[need.tag]}</span>
+                      <span className={`tag ${carrying ? 'tag--green' : need.critical ? 'tag--red' : 'tag--gold'}`}>
+                        {carrying ? carrying.name : need.critical ? 'Essential' : 'Wanted'}
+                      </span>
+                    </div>
+                    <p className="need__note">{need.note}</p>
+                    <span className="need__stage faint">
+                      {STAGE_PROFILES[need.stage].name} will miss it
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="faint intel__note">
+              Going without is a penalty at that stage, never a refusal. Equipment is bought
+              and upgraded from the Equipment tab.
+            </p>
           </div>
 
           <div className="panel">
@@ -167,39 +234,6 @@ export function TargetBoard() {
               and you will only find out which on the night. None of it survives the job —
               rotations change, and an inside man does not stay inside.
             </p>
-          </div>
-
-          <div className="panel">
-            <div className="eyebrow" style={{ marginBottom: 8 }}>
-              Approach
-            </div>
-            <div className="stack">
-              {target.approaches.map((id) => {
-                const approach = APPROACHES[id];
-                const locked = !approaches.includes(id);
-                return (
-                  <button
-                    key={id}
-                    className={`approach${draft.approachId === id ? ' approach--on' : ''}${locked ? ' approach--locked' : ''}`}
-                    disabled={locked}
-                    onClick={() => dispatch({ type: 'DRAFT', draft: { approachId: id } })}
-                  >
-                    <div className="approach__name">{approach.name}</div>
-                    <div className="approach__blurb">
-                      {locked ? 'Needs a name on the inside — buy the intel first.' : approach.blurb}
-                    </div>
-                    <div className="approach__tags">
-                      <span className="tag">+{approach.heatBase} heat</span>
-                      {approach.keyRoles.map((role) => (
-                        <span key={role} className="tag">
-                          {role}
-                        </span>
-                      ))}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
           </div>
 
           <button

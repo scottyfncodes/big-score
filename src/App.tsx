@@ -7,6 +7,7 @@ import { NewsRoom, Report } from './ui/Report';
 import { TargetBoard } from './ui/TargetBoard';
 import { Title } from './ui/Title';
 
+
 /** One screen at a time. The store owns which one. */
 export function App() {
   const { screen, campaign } = useStore();
@@ -23,7 +24,7 @@ export function App() {
     <div className="app">
       {screen === 'city' ? <CityMap /> : null}
       {screen === 'target' ? <TargetBoard /> : null}
-      {screen === 'crew' ? <CrewRoom /> : null}
+      {screen === 'crew' || screen === 'kit' ? <CrewRoom /> : null}
       {screen === 'plan' ? <PlanningBoard /> : null}
       {screen === 'execute' ? <Execution /> : null}
       {screen === 'report' ? <Report /> : null}

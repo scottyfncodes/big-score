@@ -17,7 +17,12 @@ const clamp = (n: number) => Math.max(5, Math.min(99, Math.round(n)));
 export function generateCrewMember(
   stream: Stream,
   role: CrewRole,
-  options: { experienceBias?: number; takenFirstNames?: string[] } = {},
+  options: {
+    experienceBias?: number;
+    takenFirstNames?: string[];
+    /** Somebody who needs the work and prices themselves like it. */
+    desperate?: boolean;
+  } = {},
 ): CrewMember {
   const archetype = ARCHETYPES[role];
   const experience = Math.max(
@@ -57,9 +62,14 @@ export function generateCrewMember(
   // take off the score, and a bankroll that all goes on hiring leaves nothing
   // for the intel and kit that make a plan worth running. Tuned so a four
   // hander costs roughly 40% of the opening $50,000.
-  const cost = Math.round(
-    (archetype.baseCost * (0.35 + skill / 110) * (1 + greed / 220)) / 100,
-  ) * 100;
+  const cost =
+    Math.round(
+      (archetype.baseCost *
+        (0.35 + skill / 110) *
+        (1 + greed / 220) *
+        (options.desperate ? 0.45 : 1)) /
+        100,
+    ) * 100;
 
   return {
     id: `${role}-${Math.floor(stream.next() * 1e9).toString(36)}`,
@@ -98,11 +108,22 @@ export function generateMarket(
   while (roles.length < size) roles.push(stream.pick(ROLE_ORDER));
 
   const taken = [...takenFirstNames];
-  return roles.map((role) => {
-    const member = generateCrewMember(stream, role, { experienceBias, takenFirstNames: taken });
+  const board = roles.map((role, i) => {
+    // The last two slots are always people who need the work and price
+    // themselves like it. Crew who have not been won over walk after every
+    // job, so a run of bad luck can otherwise leave a player unable to field
+    // anybody at all — there has to be a floor under the market, and in
+    // fiction there is always somebody who will take a bad night's work.
+    const broke = i >= roles.length - 2;
+    const member = generateCrewMember(stream, role, {
+      experienceBias: broke ? -1 : experienceBias,
+      desperate: broke,
+      takenFirstNames: taken,
+    });
     taken.push(member.name.split(' ')[0]);
     return member;
   });
+  return board;
 }
 
 export function experienceLabel(experience: number): string {

@@ -89,7 +89,7 @@ export function livePlan(base: Plan, run: RunState): Plan {
   };
 }
 
-export function startRun(base: Plan, seed: number): RunState {
+export function startRun(base: Plan, seed: number, seenEventIds: string[] = []): RunState {
   const stream = new Stream(seed, 0);
   const log: RunLogEntry[] = [];
 
@@ -134,6 +134,7 @@ export function startRun(base: Plan, seed: number): RunState {
     heat: 0,
     results: [],
     firedEventIds: [],
+    seenEventIds,
     log,
     crewRun,
   };
@@ -424,22 +425,29 @@ function pickEvent(
   stream: Stream,
   preferredActorId?: string,
 ): { event: GameEvent; actor: CrewMember } | undefined {
-  // An event fires at most once per run. Repeats read as the game running out
-  // of things to say, which is worse than a quiet stage.
-  const seen = new Set(run.firedEventIds);
-  const candidates: { event: GameEvent; actor: CrewMember; weight: number }[] = [];
+  // Nothing repeats within a night, and nothing repeats across the campaign
+  // either until everything else has been used. A situation the player has
+  // already resolved once reads as a rotation rather than a night.
+  const thisRun = new Set(run.firedEventIds);
+  const everSeen = new Set(run.seenEventIds ?? []);
+
+  const fresh: { event: GameEvent; actor: CrewMember; weight: number }[] = [];
+  const repeats: { event: GameEvent; actor: CrewMember; weight: number }[] = [];
 
   for (const event of EVENTS) {
     if (!event.stages.includes(stage)) continue;
+    if (thisRun.has(event.id)) continue;
     const actor = actorFor(event, plan, run, stream, preferredActorId);
     if (!actor) continue;
     const ctx = buildEventContextInline(plan, run, stage, actor);
     if (event.when && !event.when(ctx)) continue;
-    if (seen.has(event.id)) continue;
-    candidates.push({ event, actor, weight: event.weight });
+    const entry = { event, actor, weight: event.weight };
+    (everSeen.has(event.id) ? repeats : fresh).push(entry);
   }
 
-  const chosen = stream.weighted(candidates);
+  // Fall back to something already seen only when there is genuinely nothing
+  // new that fits this stage and this crew.
+  const chosen = stream.weighted(fresh.length ? fresh : repeats);
   return chosen ? { event: chosen.event, actor: chosen.actor } : undefined;
 }
 
@@ -673,6 +681,10 @@ export function finishRun(base: Plan, run: RunState, aborted: boolean): RunState
     // Greed reads the money, not the night: a greedy crew member is sourer
     // about a thin score and happier about a fat one than anyone else.
     delta += Math.round((payRatio - 0.9) * (member.greed / 10));
+    // Coming back is worth more than the first time. Somebody on their fifth
+    // job with you is deciding whether this is what they do now, and that is
+    // the decision the retention line is actually measuring.
+    delta += Math.min(6, member.jobsWithYou ?? 0);
     if (aborted) delta -= 2;
     loyaltyDeltas[member.id] = delta;
   }
@@ -750,8 +762,9 @@ export function playOut(
   base: Plan,
   seed: number,
   choose: (event: GameEvent, ctx: EventContext) => string,
+  seenEventIds: string[] = [],
 ): RunState {
-  let run = startRun(base, seed);
+  let run = startRun(base, seed, seenEventIds);
   let guard = 0;
   while (!run.outcome && guard++ < 60) {
     if (run.pending) {

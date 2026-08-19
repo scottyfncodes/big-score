@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from 'react';
 import { heatTier } from '../game/campaign';
-import type { CrewMember } from '../game/types';
+import type { CrewMember, Screen } from '../game/types';
 import { ARCHETYPES } from '../data/crew';
 import { TRAITS } from '../data/traits';
 import { experienceLabel } from '../game/generation';
@@ -27,12 +27,15 @@ export function Hud({
   bankroll,
   heat,
   day,
+  nav,
 }: {
   title: string;
   onBack?: () => void;
   bankroll: number;
   heat: number;
   day: number;
+  /** Screen + navigate, when this screen should show the section bar. */
+  nav?: { screen: Screen; go: (screen: Screen) => void };
 }) {
   const tier = heatTier(heat);
   const level = Math.min(4, Math.floor(heat / 21));
@@ -62,7 +65,45 @@ export function Hud({
           </div>
         </div>
       </div>
+      {nav ? <Nav screen={nav.screen} go={nav.go} /> : null}
     </header>
+  );
+}
+
+/**
+ * The bar under the header.
+ *
+ * Crew and equipment are campaign-level things the player wants to reach from
+ * wherever they are — mid-plan, mid-dossier — rather than only from the city.
+ * It is deliberately absent during a heist: once the job starts, hiring and
+ * shopping are over.
+ */
+export function Nav({
+  screen,
+  go,
+}: {
+  screen: Screen;
+  go: (screen: Screen) => void;
+}) {
+  const items: { id: Screen; label: string }[] = [
+    { id: 'city', label: 'City' },
+    { id: 'crew', label: 'Crew' },
+    { id: 'kit', label: 'Equipment' },
+    { id: 'news', label: 'Paper' },
+  ];
+  return (
+    <nav className="nav" aria-label="Main">
+      {items.map((item) => (
+        <button
+          key={item.id}
+          className={`nav__item${screen === item.id ? ' nav__item--on' : ''}`}
+          onClick={() => go(item.id)}
+          aria-current={screen === item.id ? 'page' : undefined}
+        >
+          {item.label}
+        </button>
+      ))}
+    </nav>
   );
 }
 

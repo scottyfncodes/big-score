@@ -835,6 +835,465 @@ export const EVENTS: GameEvent[] = [
       },
     ],
   },
+  {
+    id: 'vault_spec_pays',
+    stages: ['objective'],
+    weight: 8,
+    actor: { role: 'safecracker' },
+    when: (ctx) => ctx.knows('vault'),
+    title: 'Exactly as described',
+    body: 'The door is the model in the file, in the condition the file said, with the drift the file mentioned. {actor} has done this one before, on paper, at a kitchen table.',
+    choices: [
+      {
+        id: 'by_the_book',
+        label: 'Work the file',
+        hint: 'The information you bought is the whole job now.',
+        resolve: (ctx) => ({
+          text: `${first(ctx)} does not hurry and does not stop, and the door comes open a clean four minutes early.`,
+          time: -100,
+          noise: -8,
+          composure: 10,
+        }),
+      },
+      {
+        id: 'greedy_open',
+        label: 'Open the deposit wall too',
+        hint: 'You know this room now. You will not know it again.',
+        check: { attr: 'security', dc: 60 },
+        resolve: (ctx, passed) =>
+          passed
+            ? {
+                text: 'The wall comes off in sections and there is a great deal behind it that nobody insured.',
+                time: 110,
+                noise: 12,
+                bonusTake: Math.round(ctx.target.value * 0.3),
+              }
+            : {
+                text: `${first(ctx)} gets two of them open and jams the third so thoroughly that the room is now a crime scene with a signature on it.`,
+                time: 120,
+                noise: 18,
+                heat: 6,
+              },
+      },
+    ],
+  },
+  {
+    id: 'no_entry_tool',
+    stages: ['entry'],
+    weight: 9,
+    actor: { any: true },
+    when: (ctx) => !ctx.equipment.some((e) => e.tag === 'entry'),
+    title: 'Nobody brought anything for this',
+    body: 'The lock is modern, it is well fitted, and {actor} is looking at it holding a screwdriver and an expression.',
+    choices: [
+      {
+        id: 'improvise',
+        label: 'Improvise',
+        hint: 'Hands, patience, and something that was not designed for this.',
+        check: { attr: 'technical', dc: 62 },
+        resolve: (ctx, passed) =>
+          passed
+            ? {
+                text: `${first(ctx)} takes the cylinder out of the door in about six minutes using a tool meant for something else entirely.`,
+                time: 150,
+                noise: 6,
+                composure: 8,
+              }
+            : {
+                text: 'The screwdriver wins an argument with the frame. The frame is louder about it than anyone expected.',
+                time: 130,
+                noise: 26,
+                alarm: true,
+              },
+      },
+      {
+        id: 'window',
+        label: 'Find another way in',
+        hint: 'Every building has a door somebody forgot about.',
+        check: { attr: 'stealth', dc: 52 },
+        resolve: (ctx, passed) =>
+          passed
+            ? {
+                text: `${first(ctx)} finds a fire door propped for a cigarette break that ended an hour ago.`,
+                time: 90,
+                noise: 2,
+              }
+            : {
+                text: 'Twelve minutes of walking round a building at night, which is exactly as conspicuous as it sounds.',
+                time: 200,
+                noise: 14,
+              },
+      },
+    ],
+  },
+  {
+    id: 'scout_read_it',
+    stages: ['approach'],
+    weight: 7,
+    actor: { role: 'scout' },
+    title: 'That car has been there both nights',
+    body: '{actor} has noticed a vehicle parked where a vehicle was parked the last time they walked this street, with somebody in it.',
+    choices: [
+      {
+        id: 'wait',
+        label: 'Wait for it to move',
+        hint: 'It might be nothing. It might be the job.',
+        resolve: (ctx) => ({
+          text: `It moves at twenty past. ${first(ctx)} does not say what they think it was and nobody asks.`,
+          time: 160,
+          noise: -6,
+        }),
+      },
+      {
+        id: 'around',
+        label: 'Go the long way',
+        hint: 'Add ten minutes, subtract a witness.',
+        resolve: () => ({
+          text: 'Everyone approaches from the market side instead, through a service yard nobody watches.',
+          time: 110,
+          heat: -3,
+        }),
+      },
+      {
+        id: 'ignore_car',
+        label: 'Walk past it',
+        hint: 'It is a man asleep in a car.',
+        check: { attr: 'nerve', dc: 48 },
+        resolve: (ctx, passed) =>
+          passed
+            ? { text: 'It is a man asleep in a car.', time: -30 }
+            : {
+                text: `It is not a man asleep in a car, and ${first(ctx)} realises this at the moment of walking past the window.`,
+                heat: 8,
+                noise: 10,
+              },
+      },
+    ],
+  },
+  {
+    id: 'muscle_known',
+    stages: ['approach', 'extraction'],
+    weight: 7,
+    actor: { role: 'muscle' },
+    title: 'Somebody knows their face',
+    body: 'A man on the door has spent nine seconds looking at {actor} and is now looking at them differently.',
+    choices: [
+      {
+        id: 'front_it',
+        label: 'Front it out',
+        hint: 'Be the last person he would like to be wrong about.',
+        check: { attr: 'nerve', dc: 55 },
+        resolve: (ctx, passed) =>
+          passed
+            ? {
+                text: `${first(ctx)} holds the look until it is returned to sender, and the man finds something else to do.`,
+                time: 30,
+                composure: 6,
+              }
+            : {
+                text: 'He decides he is sure. He does not say anything, which is worse, because it means he is telling somebody else.',
+                heat: 10,
+                noise: 8,
+              },
+      },
+      {
+        id: 'swap',
+        label: 'Send somebody else',
+        hint: 'Pull them out and rearrange the plan around it.',
+        resolve: (ctx) => ({
+          text: `${first(ctx)} sits the next ten minutes out in a doorway, furious and useful to nobody.`,
+          time: 80,
+          takeMul: -0.05,
+          composure: -8,
+        }),
+      },
+    ],
+  },
+  {
+    id: 'shaking_hands',
+    stages: ['objective'],
+    weight: 8,
+    actor: { role: 'safecracker' },
+    when: (ctx) => ctx.run.noise > 30 || ctx.run.alarm,
+    title: 'Not with this going on',
+    body: 'Something loud happened two rooms ago and {actor} has stopped, hands flat on the door, waiting for a building that will not go quiet.',
+    choices: [
+      {
+        id: 'give_time',
+        label: 'Give them the room',
+        hint: 'Everyone else stops moving. It costs whatever it costs.',
+        resolve: (ctx) => ({
+          text: `Ninety seconds of nobody breathing, and then ${first(ctx)}'s hands are steady again.`,
+          time: 100,
+          composure: 14,
+        }),
+      },
+      {
+        id: 'push_them',
+        label: 'Tell them to work',
+        hint: 'There is no version of tonight with a spare ninety seconds in it.',
+        check: { attr: 'nerve', dc: 58 },
+        resolve: (ctx, passed) =>
+          passed
+            ? {
+                text: `${first(ctx)} works angry and works well, which is not the same as forgiving you for it.`,
+                time: -40,
+                loyalty: { [ctx.actor.id]: -6 },
+              }
+            : {
+                text: 'They cannot do it. They genuinely cannot, and everybody watching them try makes it worse.',
+                time: 130,
+                takeMul: -0.2,
+                composure: -18,
+              },
+      },
+    ],
+  },
+  {
+    id: 'driver_holding',
+    stages: ['extraction'],
+    weight: 8,
+    actor: { role: 'driver' },
+    when: (ctx) => ctx.run.policeOnSite || ctx.run.exposedAt !== null,
+    title: 'The van cannot sit here',
+    body: '{actor} is on the radio saying a marked car has passed the end of the street twice and the third time will not be a pass.',
+    choices: [
+      {
+        id: 'circle',
+        label: 'Have them circle',
+        hint: 'A moving vehicle is a vehicle going somewhere.',
+        resolve: (ctx) => ({
+          text: `${first(ctx)} takes the van round the block on a loop, and the pickup point becomes a moving target for everyone including you.`,
+          time: 70,
+          noise: -6,
+        }),
+      },
+      {
+        id: 'now',
+        label: 'Come out now, ready or not',
+        hint: 'Whatever is in the bags is what you are leaving with.',
+        resolve: () => ({
+          text: 'Everyone goes out through the loading door at a pace, carrying what they had rather than what they came for.',
+          time: -120,
+          takeMul: -0.14,
+          noise: 8,
+        }),
+      },
+    ],
+  },
+  {
+    id: 'dog_on_the_lot',
+    stages: ['approach', 'entry'],
+    weight: 7,
+    actor: { any: true },
+    when: (ctx) => !ctx.knows('rotation') && !ctx.hasKit('thermal'),
+    title: 'There is a dog',
+    body: 'Nobody bought the rotation and nobody scouted the yard, so nobody knew about the dog until it was eleven feet from {actor}.',
+    choices: [
+      {
+        id: 'still',
+        label: 'Everybody stop moving',
+        hint: 'Be furniture until it loses interest.',
+        check: { attr: 'nerve', dc: 50 },
+        resolve: (ctx, passed) =>
+          passed
+            ? {
+                text: `It loses interest. ${first(ctx)} does not move for a further two minutes anyway.`,
+                time: 120,
+                noise: 4,
+              }
+            : {
+                text: 'It does not lose interest. It has, in fact, only just started.',
+                time: 70,
+                noise: 28,
+              },
+      },
+      {
+        id: 'feed',
+        label: 'Deal with it quietly',
+        hint: 'Somebody brought something for exactly this and never said.',
+        resolve: () => ({
+          text: 'Half a sandwich, thrown well. The dog and the crew reach an understanding.',
+          time: 40,
+          noise: -4,
+        }),
+      },
+    ],
+  },
+  {
+    id: 'someone_upstairs',
+    stages: ['objective'],
+    weight: 7,
+    actor: { any: true },
+    when: (ctx) => ctx.approach.id === 'social' || ctx.approach.id === 'inside',
+    title: 'A door opens above you',
+    body: 'Footsteps on the floor above, unhurried, going to a kitchen. {actor} freezes with the bag half open.',
+    choices: [
+      {
+        id: 'wait_out',
+        label: 'Let them make their tea',
+        hint: 'They will go back. People always go back.',
+        resolve: () => ({
+          text: 'A kettle, a cupboard, a chair. Four minutes of somebody having an ordinary night directly above a robbery.',
+          time: 190,
+          noise: -8,
+        }),
+      },
+      {
+        id: 'keep_working',
+        label: 'Keep working, quietly',
+        hint: 'One floor of concrete is a lot of concrete.',
+        check: { attr: 'stealth', dc: 56 },
+        resolve: (ctx, passed) =>
+          passed
+            ? {
+                text: `${first(ctx)} works through it without a sound and is finished before the kettle is.`,
+                time: -20,
+                composure: 6,
+              }
+            : {
+                text: 'Something metal goes over. Upstairs, the footsteps stop, and then start again in a different direction.',
+                noise: 22,
+                time: 40,
+              },
+      },
+    ],
+  },
+  {
+    id: 'lights_go_out',
+    stages: ['security'],
+    weight: 6,
+    actor: { any: true },
+    when: (ctx) => !ctx.hasKit('jammer') && !ctx.run.alarm,
+    title: 'The building does it for you',
+    body: 'Every light on the floor dies at once, along with the hum nobody had noticed until it stopped. {actor} has not touched anything.',
+    choices: [
+      {
+        id: 'run_with_it',
+        label: 'Take the gift',
+        hint: 'The cameras are off. Nobody knows why yet.',
+        resolve: (ctx) => ({
+          text: `${first(ctx)} moves the whole crew through in the dark before anything has been reset.`,
+          time: -90,
+          noise: -12,
+          composure: 8,
+        }),
+      },
+      {
+        id: 'suspicious',
+        label: 'Treat it as a trap',
+        hint: 'Nothing about tonight has been a gift so far.',
+        resolve: () => ({
+          text: 'Everyone holds position for the whole outage, and the lights come back on an empty corridor with four people standing in it.',
+          time: 120,
+          noise: 4,
+        }),
+      },
+    ],
+  },
+  {
+    id: 'old_debt',
+    stages: ['approach', 'entry'],
+    weight: 6,
+    actor: { any: true },
+    when: (ctx) => ctx.actor.loyalty > 70,
+    title: 'They have been thinking about it',
+    body: 'On the way in, {actor} says — not as a complaint, just as a fact — that they have never once been left behind on one of your jobs, and that they have noticed.',
+    choices: [
+      {
+        id: 'say_nothing',
+        label: 'Say nothing',
+        hint: 'Now is not the time and they know it.',
+        resolve: (ctx) => ({
+          text: `${first(ctx)} nods once and goes in first, which is its own kind of answer.`,
+          composure: 10,
+        }),
+      },
+      {
+        id: 'promise',
+        label: 'Tell them it stays that way',
+        hint: 'A thing you will have to mean later.',
+        resolve: (ctx) => ({
+          text: 'It is a small thing to say in a doorway. It changes how the next four hours go.',
+          composure: 14,
+          loyalty: { [ctx.actor.id]: 8 },
+        }),
+      },
+    ],
+  },
+  {
+    id: 'heavy_bags',
+    stages: ['escape'],
+    weight: 7,
+    actor: { trait: 'greedy' },
+    when: (ctx) => ctx.run.bonusTake > 0,
+    title: 'It does not all fit',
+    body: 'The van was packed for the job you planned, not the job you did. {actor} is standing in the road holding the difference.',
+    choices: [
+      {
+        id: 'take_it_all',
+        label: 'Make it fit',
+        hint: 'Two minutes of loading in an open street.',
+        resolve: (ctx) => ({
+          text: `${first(ctx)} gets every bag in and rides the last three streets lying on top of them.`,
+          time: 90,
+          noise: 10,
+        }),
+      },
+      {
+        id: 'leave_some',
+        label: 'Leave what will not fit',
+        hint: 'Money in a gutter is still better than money in an evidence bag.',
+        resolve: (ctx) => ({
+          text: 'Two bags go into a skip behind the units. Nobody speaks about it in the van.',
+          time: -40,
+          takeMul: -0.1,
+          heat: -4,
+          loyalty: { [ctx.actor.id]: -6 },
+        }),
+      },
+    ],
+  },
+  {
+    id: 'trained_hand',
+    stages: ['security', 'objective', 'entry'],
+    weight: 6,
+    actor: { any: true },
+    when: (ctx) => (ctx.actor.trained ?? 0) >= 2,
+    title: 'The lessons show',
+    body: 'This is the exact situation {actor} has been paying to be ready for, on your money, for weeks.',
+    choices: [
+      {
+        id: 'let_them',
+        label: 'Let them handle it',
+        hint: 'This is what the training was for.',
+        check: { attr: 'technical', dc: 50 },
+        resolve: (ctx, passed) =>
+          passed
+            ? {
+                text: `${first(ctx)} does it quickly and without discussion, like somebody who has done it before, because now they have.`,
+                time: -80,
+                noise: -8,
+                composure: 12,
+              }
+            : {
+                text: `${first(ctx)} gets most of the way there and then finds the edge of what they were taught.`,
+                time: 60,
+                noise: 8,
+                composure: -6,
+              },
+      },
+      {
+        id: 'do_it_together',
+        label: 'Put somebody with them',
+        hint: 'Slower, and nobody finds the edge of anything.',
+        resolve: () => ({
+          text: 'Two people, four hands, and a job that takes longer than it should and works.',
+          time: 70,
+        }),
+      },
+    ],
+  },
 ];
 
 export function eventById(id: string): GameEvent | undefined {

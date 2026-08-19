@@ -55,6 +55,20 @@ lie can be a lie rather than a dead purchase.
 Running the Inside Job without an inside man is a bad idea you are allowed to
 have. "Can I make this work anyway" has to remain answerable.
 
+**Crew are hired, not owned.** Below the retention line everybody is a
+freelancer: they take the fee, they take their cut, and after the job they go
+home. Hire them again and they remember — loyalty carries across every rehire,
+and past the line they stay for good, drawing a retainer every day whether or
+not there is work. Freelancers cost per job; permanent crew cost per day. That
+choice is the whole crew economy.
+
+**Skills and kit are both investments.** A lesson raises one attribute by five
+and is priced off the current value, so rounding out a weak skill is cheap and
+pushing a specialist further is not. Equipment upgrades twice, buying a bigger
+bonus *and* a tool far likelier to work on the night. Both matter because the
+planning board names the exact attribute each stage will test and the exact
+kit the job is asking for.
+
 **The city is the progression, not the target.** A building you have robbed is
 worth a fraction of what it was and has better locks than it did; what is left
 grows back over weeks. Intel does not survive the job it was bought for — the
@@ -136,8 +150,14 @@ peak in the middle.
 ## Content
 
 7 targets across 6 districts · 8 crew archetypes generated from 24 first names
-· 8 traits, each named by at least two events · 10 pieces of equipment ·
-19 conditioned events · 60 lines of stage narration · 8 headline templates.
+· 8 traits, each named by at least two events · 10 pieces of equipment, each
+upgradeable twice · 31 conditioned events · 60 lines of stage narration ·
+8 headline templates.
+
+Every target names the kit it needs by tag rather than by item — "a way through
+a modern lock", "something to blind the cameras" — so the player chooses how to
+pay for it. Missing a tag is a penalty at the one stage that needed it, exactly
+like missing the crew role that covers it. Neither is ever a refusal.
 
 Two content rules are enforced by `content.test.ts`: every event names a
 specific member of the crew, and every event is conditioned on something the

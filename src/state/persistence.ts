@@ -63,5 +63,23 @@ function migrate(save: Campaign): Campaign | undefined {
     next = { ...next, hits: next.hits ?? {}, version: 2 };
   }
 
+  // v2 -> v3: equipment levels, the contact book behind crew retention, and
+  // the campaign's event memory. Anyone already on the payroll is treated as
+  // a contact and keeps their post; nobody is made to walk by an upgrade.
+  if (next.version < 3) {
+    const contacts = { ...(next.contacts ?? {}) };
+    for (const record of Object.values(next.crew ?? {})) contacts[record.member.id] = record.member;
+    next = {
+      ...next,
+      equipmentLevels: next.equipmentLevels ?? {},
+      contacts,
+      seenEventIds: next.seenEventIds ?? [],
+      crew: Object.fromEntries(
+        Object.entries(next.crew ?? {}).map(([id, record]) => [id, { ...record, retained: true }]),
+      ),
+      version: 3,
+    };
+  }
+
   return { ...next, version: SAVE_VERSION };
 }

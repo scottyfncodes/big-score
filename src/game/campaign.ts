@@ -1,5 +1,11 @@
 import { DISTRICTS } from '../data/districts';
-import { EQUIPMENT, equipmentById } from '../data/equipment';
+import {
+  EQUIPMENT,
+  MAX_EQUIPMENT_LEVEL,
+  equipmentAtLevel,
+  equipmentById,
+  upgradeCost,
+} from '../data/equipment';
 import { TARGETS, targetById } from '../data/targets';
 import { APPROACHES } from '../data/approaches';
 import { generateMarket } from './generation';
@@ -9,6 +15,7 @@ import { buyIntel, intelCost, sourceById } from './intel';
 import type { Plan } from './calc';
 import type {
   ApproachId,
+  Attribute,
   Campaign,
   CrewMember,
   CrewRecord,
@@ -26,7 +33,7 @@ import type {
  * exists, which is what lets the whole progression be tested in a terminal.
  */
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 export const STARTING_BANKROLL = 50000;
 
 export const HEAT_TIERS = [
@@ -52,6 +59,9 @@ export function newCampaign(seed: number, handle: string): Campaign {
     crew: {},
     market: generateMarket(seed, 1),
     ownedEquipment: [],
+    equipmentLevels: {},
+    contacts: {},
+    seenEventIds: [],
     intel: {},
     scouted: {},
     hits: {},
@@ -85,10 +95,47 @@ export function heatSecurityMultiplier(heat: number): number {
  */
 export const PASSIVE_DECAY_PER_DAY = 1.5;
 
+/**
+ * What a permanent crew costs to keep.
+ *
+ * This is the other half of the retention bargain. Freelancers are paid per
+ * job and go home; retained crew stay, and staying costs money every day
+ * whether or not there is work. Without it, waiting is free — Heat fades and
+ * targets grow back on their own, so a headless campaign that simply sat still
+ * whenever the board looked thin won 95% of the time and never went broke.
+ * Days have to cost something, and a payroll is the honest thing for them to
+ * cost.
+ */
+export const UPKEEP_RATE = 0.02;
+
+export function dailyUpkeep(campaign: Campaign): number {
+  return Object.values(campaign.crew ?? {})
+    .filter((r) => r.retained)
+    .reduce((sum, r) => sum + r.member.cost * UPKEEP_RATE, 0);
+}
+
 export function advanceDays(campaign: Campaign, days: number): Campaign {
+  const owed = Math.round(dailyUpkeep(campaign) * days);
+  const paid = Math.min(owed, campaign.bankroll);
+  const short = owed - paid;
+
+  // Missing the retainer is noticed immediately and costs more than the money.
+  const crew = short > 0
+    ? Object.fromEntries(
+        Object.entries(campaign.crew).map(([id, record]) => [
+          id,
+          record.retained
+            ? { ...record, member: { ...record.member, loyalty: Math.max(0, record.member.loyalty - 4) } }
+            : record,
+        ]),
+      )
+    : campaign.crew;
+
   return {
     ...campaign,
     day: campaign.day + days,
+    bankroll: campaign.bankroll - paid,
+    crew,
     heat: Math.max(0, Math.round(campaign.heat - days * PASSIVE_DECAY_PER_DAY)),
   };
 }
@@ -110,12 +157,26 @@ export function targetHits(campaign: Campaign, targetId: string) {
   return campaign.hits?.[targetId] ?? { count: 0, lastDay: 0 };
 }
 
+/**
+ * A robbed target grows back, but never all the way.
+ *
+ * The ceiling matters more than the recovery rate. When a target could return
+ * to full value given enough days, infinite patience became infinite money: a
+ * headless campaign that simply waited whenever the board looked thin reached
+ * tier 3 in 98% of runs and produced one catastrophe in five hundred jobs.
+ * Somewhere permanent has to be lost each time, so that the city is a finite
+ * resource and climbing the tiers is the only way to keep earning.
+ */
+export function recoveryCeiling(count: number): number {
+  return Math.max(0.25, 1 - count * 0.18);
+}
+
 export function targetValueMultiplier(campaign: Campaign, targetId: string): number {
   const { count, lastDay } = targetHits(campaign, targetId);
   if (count === 0) return 1;
   const emptied = Math.pow(0.35, count);
   const recovered = emptied + (campaign.day - lastDay) * HIT_RECOVERY_PER_DAY;
-  return Math.max(HIT_VALUE_FLOOR, Math.min(1, recovered));
+  return Math.max(HIT_VALUE_FLOOR, Math.min(recoveryCeiling(count), recovered));
 }
 
 /**
@@ -207,13 +268,41 @@ export function crewRecords(campaign: Campaign): CrewRecord[] {
   return Object.values(campaign.crew);
 }
 
+/**
+ * Loyalty, and who is actually yours.
+ *
+ * Below the line, everyone on the payroll is a freelancer: they take the fee,
+ * they take the cut, and after the job they go home. You hire them again next
+ * time, and they remember you — loyalty carries across every rehire, so the
+ * climb to a permanent crew is the campaign's real progression. Above the
+ * line, they stay, and they stop being a line item you re-pay every job.
+ */
+export const LOYALTY_RETAIN = 60;
+
+export function isRetained(member: CrewMember): boolean {
+  return member.loyalty >= LOYALTY_RETAIN;
+}
+
 export function hireCost(member: CrewMember, campaign: Campaign): number {
-  return Math.round((member.cost * crewPriceMultiplier(campaign.heat)) / 100) * 100;
+  // Somebody who has worked for you before, and liked it, asks for less.
+  const known = campaign.contacts?.[member.id];
+  const familiarity = known ? 1 - Math.min(0.55, member.loyalty / 140) : 1;
+  return (
+    Math.round((member.cost * crewPriceMultiplier(campaign.heat) * familiarity) / 100) * 100
+  );
+}
+
+/** People you have worked with who are not currently on the payroll. */
+export function contactsAvailable(campaign: Campaign): CrewMember[] {
+  return Object.values(campaign.contacts ?? {})
+    .filter((m) => !campaign.crew[m.id])
+    .sort((a, b) => b.loyalty - a.loyalty);
 }
 
 export function hire(campaign: Campaign, memberId: string): Campaign {
-  const member = campaign.market.find((m) => m.id === memberId);
-  if (!member) return campaign;
+  const member =
+    campaign.market.find((m) => m.id === memberId) ?? campaign.contacts?.[memberId];
+  if (!member || campaign.crew[memberId]) return campaign;
   const cost = hireCost(member, campaign);
   if (campaign.bankroll < cost) return campaign;
 
@@ -221,12 +310,14 @@ export function hire(campaign: Campaign, memberId: string): Campaign {
     ...campaign,
     bankroll: campaign.bankroll - cost,
     market: campaign.market.filter((m) => m.id !== memberId),
+    contacts: { ...campaign.contacts, [member.id]: member },
     crew: {
       ...campaign.crew,
       [member.id]: {
         member: { ...member, hiredOnDay: campaign.day },
         condition: 'ready',
         availableOnDay: campaign.day,
+        retained: isRetained(member),
         jobsRun: 0,
         bonds: {},
       },
@@ -251,8 +342,94 @@ export function buyEquipment(campaign: Campaign, equipmentId: string): Campaign 
   };
 }
 
+/** Owned kit, resolved to the level the player has paid for. */
 export function ownedEquipment(campaign: Campaign) {
-  return EQUIPMENT.filter((e) => campaign.ownedEquipment.includes(e.id));
+  return EQUIPMENT.filter((e) => campaign.ownedEquipment.includes(e.id)).map((e) =>
+    equipmentAtLevel(e, equipmentLevel(campaign, e.id)),
+  );
+}
+
+export function equipmentLevel(campaign: Campaign, id: string): number {
+  return campaign.equipmentLevels?.[id] ?? 1;
+}
+
+export function canUpgradeEquipment(campaign: Campaign, id: string): boolean {
+  return (
+    campaign.ownedEquipment.includes(id) && equipmentLevel(campaign, id) < MAX_EQUIPMENT_LEVEL
+  );
+}
+
+export function equipmentUpgradeCost(campaign: Campaign, id: string): number {
+  const item = equipmentById(id);
+  if (!item) return 0;
+  return upgradeCost(item, equipmentLevel(campaign, id));
+}
+
+/**
+ * Better kit is bought, not found. The upgrade buys two things at once: a
+ * bigger bonus, and a tool that is far likelier to work at all on the night —
+ * which is the half that actually changes how a plan feels to commit to.
+ */
+export function upgradeEquipment(campaign: Campaign, id: string): Campaign {
+  if (!canUpgradeEquipment(campaign, id)) return campaign;
+  const cost = equipmentUpgradeCost(campaign, id);
+  if (campaign.bankroll < cost) return campaign;
+  return {
+    ...campaign,
+    bankroll: campaign.bankroll - cost,
+    equipmentLevels: {
+      ...campaign.equipmentLevels,
+      [id]: equipmentLevel(campaign, id) + 1,
+    },
+  };
+}
+
+/* ---------------------------------------------------------------- training */
+
+export const TRAINING_STEP = 5;
+export const TRAINING_CAP = 95;
+
+/**
+ * Paying somebody to get better at the thing they already do.
+ *
+ * Cost climbs steeply with the stat, so raising a specialist's best attribute
+ * is a real investment and rounding out a weak one is cheap. That is the shape
+ * that makes the planning board's per-stage attributes matter: you can either
+ * hire the person who covers the gap, or make one of yours cover it.
+ */
+export function trainingCost(member: CrewMember, attr: Attribute): number {
+  const current = member.stats[attr];
+  return Math.round((900 + Math.pow(current / 10, 2.6) * 42) / 100) * 100;
+}
+
+export function canTrain(member: CrewMember, attr: Attribute): boolean {
+  return member.stats[attr] < TRAINING_CAP;
+}
+
+export function train(campaign: Campaign, memberId: string, attr: Attribute): Campaign {
+  const record = campaign.crew[memberId];
+  if (!record || !canTrain(record.member, attr)) return campaign;
+  const cost = trainingCost(record.member, attr);
+  if (campaign.bankroll < cost) return campaign;
+
+  const next = advanceDays(campaign, 1);
+  const member: CrewMember = {
+    ...record.member,
+    stats: {
+      ...record.member.stats,
+      [attr]: Math.min(TRAINING_CAP, record.member.stats[attr] + TRAINING_STEP),
+    },
+    trained: (record.member.trained ?? 0) + 1,
+    // Time and money spent on somebody is noticed.
+    loyalty: Math.min(100, record.member.loyalty + 2),
+  };
+
+  return {
+    ...next,
+    bankroll: next.bankroll - cost,
+    crew: { ...next.crew, [memberId]: { ...record, member } },
+    contacts: { ...next.contacts, [memberId]: member },
+  };
 }
 
 export function scoutPasses(campaign: Campaign, targetId: string): number {
@@ -338,6 +515,9 @@ export function completeHeist(campaign: Campaign, run: RunState, plan: Plan): Ca
   const result: HeistResult = run.outcome!;
   const crew = { ...campaign.crew };
 
+  const contacts = { ...campaign.contacts };
+  const walkedAway: string[] = [];
+
   for (const member of plan.crew) {
     const record = crew[member.id];
     if (!record) continue;
@@ -346,17 +526,37 @@ export function completeHeist(campaign: Campaign, run: RunState, plan: Plan): Ca
       0,
       Math.min(100, record.member.loyalty + (result.loyaltyDeltas[member.id] ?? 0)),
     );
+    const updated: CrewMember = {
+      ...record.member,
+      loyalty,
+      jobsWithYou: (record.member.jobsWithYou ?? 0) + 1,
+      // Every third job together is worth a level, to a cap of veteran.
+      experience: Math.min(3, record.member.experience + ((record.jobsRun + 1) % 3 === 0 ? 1 : 0)),
+    };
+
+    // Whatever happens, you now know them and they now know you.
+    contacts[member.id] = updated;
+
+    const held = state?.caught;
+    const retained = record.retained || isRetained(updated);
+
+    // A freelancer who has not been won over goes home after the job. They can
+    // be hired back — with the loyalty they left with — which is what makes
+    // repeat work the way a crew is actually built. Anyone in custody stays on
+    // the books, because somebody has to decide whether to post their bail.
+    if (!retained && !held) {
+      delete crew[member.id];
+      walkedAway.push(member.id);
+      continue;
+    }
+
     crew[member.id] = {
       ...record,
       jobsRun: record.jobsRun + 1,
-      condition: state?.caught ? 'arrested' : state?.injured ? 'injured' : 'ready',
+      retained,
+      condition: held ? 'arrested' : state?.injured ? 'injured' : 'ready',
       availableOnDay: state?.injured ? campaign.day + 4 : campaign.day + 1,
-      member: {
-        ...record.member,
-        loyalty,
-        // Every third job together is worth a level, to a cap of veteran.
-        experience: Math.min(3, record.member.experience + ((record.jobsRun + 1) % 3 === 0 ? 1 : 0)),
-      },
+      member: updated,
     };
   }
 
@@ -369,7 +569,9 @@ export function completeHeist(campaign: Campaign, run: RunState, plan: Plan): Ca
     cursor: run.cursor + 3,
   });
 
-  const day = campaign.day + 2;
+  // The job itself takes two days, and the payroll runs on both of them.
+  const paidUp = advanceDays(campaign, 2);
+  const day = paidUp.day;
 
   // Intel about a target does not survive robbing it. The rotation changes,
   // the inside man is questioned or resigns, the locks are replaced. Keeping
@@ -383,7 +585,7 @@ export function completeHeist(campaign: Campaign, run: RunState, plan: Plan): Ca
   return {
     ...campaign,
     day,
-    bankroll: campaign.bankroll + result.net,
+    bankroll: paidUp.bankroll + result.net,
     heat: Math.max(0, Math.min(100, campaign.heat + result.heat - 2 * PASSIVE_DECAY_PER_DAY)),
     score: campaign.score + result.gross,
     intel,
@@ -392,6 +594,9 @@ export function completeHeist(campaign: Campaign, run: RunState, plan: Plan): Ca
       [plan.target.id]: { count: previous.count + 1, lastDay: day },
     },
     crew,
+    contacts,
+    walkedAway,
+    seenEventIds: [...new Set([...(campaign.seenEventIds ?? []), ...run.firedEventIds])],
     market: generateMarket(
       campaign.seed,
       day,
@@ -420,10 +625,10 @@ export function lieLowRelief(heat: number): number {
 }
 
 export function lieLow(campaign: Campaign): Campaign {
-  const day = campaign.day + LIE_LOW_DAYS;
+  const next = advanceDays(campaign, LIE_LOW_DAYS);
+  const day = next.day;
   return {
-    ...campaign,
-    day,
+    ...next,
     heat: Math.max(0, campaign.heat - lieLowRelief(campaign.heat)),
     market: generateMarket(
       campaign.seed,

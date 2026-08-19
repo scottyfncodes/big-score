@@ -101,6 +101,14 @@ export interface CrewMember {
   cost: number;
   /** Share of the take, as a fraction. Greed pushes this up. */
   cut: number;
+  /** Points spent on this member's stats, for pricing the next lesson. */
+  trained?: number;
+  /**
+   * Jobs run for you, ever — across every time they walked and were hired
+   * back. This is what turns rehiring the same faces into a relationship
+   * rather than a recurring bill.
+   */
+  jobsWithYou?: number;
   bio: string;
   hiredOnDay?: number;
 }
@@ -111,6 +119,11 @@ export type CrewCondition = 'ready' | 'injured' | 'burned' | 'arrested' | 'dead'
 export interface CrewRecord {
   member: CrewMember;
   condition: CrewCondition;
+  /**
+   * True once loyalty passed the retention line. Retained crew stay on the
+   * payroll between jobs; everyone else is a freelancer who walks after one.
+   */
+  retained?: boolean;
   /** Day the member becomes available again. */
   availableOnDay: number;
   jobsRun: number;
@@ -160,6 +173,16 @@ export interface Security {
   responseTime: number;
 }
 
+/** A thing this job genuinely needs, and the stage that will miss it. */
+export interface KitRequirement {
+  tag: EquipTag;
+  stage: StageId;
+  /** Why, in the fiction. Shown on the dossier and the planning board. */
+  note: string;
+  /** True when going without is close to hopeless rather than merely costly. */
+  critical?: boolean;
+}
+
 export interface Target {
   id: string;
   name: string;
@@ -172,6 +195,8 @@ export interface Target {
   /** Security the player can see without scouting. The rest is guesswork. */
   publicSecurity: (keyof Security)[];
   approaches: ApproachId[];
+  /** The kit this job asks for, by tag. Parallel to crew role coverage. */
+  needs: KitRequirement[];
   topics: IntelTopic[];
   /** Flavour, and the reason to pick this job over the other one. */
   blurb: string;
@@ -190,11 +215,28 @@ export interface District {
   unlockAtScore: number;
 }
 
+/**
+ * What a piece of kit *is*, as opposed to what it does to the numbers.
+ * Targets ask for tags, not for specific items, so a job can say "you need a
+ * way through a modern lock" and let the player decide how to pay for it.
+ */
+export type EquipTag =
+  | 'comms'
+  | 'entry'
+  | 'cutting'
+  | 'signal'
+  | 'cover'
+  | 'surveillance'
+  | 'vehicle';
+
 export interface Equipment {
   id: string;
   name: string;
   cost: number;
   blurb: string;
+  tag: EquipTag;
+  /** What the next tier of this kit is called, level 2 then level 3. */
+  tiers: [string, string];
   /** Stage-specific bonus to the crew's score. */
   bonus: Partial<Record<StageId, number>>;
   /** Attribute-wide bonus, applied wherever that attribute is tested. */
@@ -360,6 +402,12 @@ export interface RunState {
   results: StageResult[];
   /** Events already fired tonight. Nothing repeats within one run. */
   firedEventIds: string[];
+  /**
+   * Events this campaign has already produced on earlier jobs. Situations
+   * should feel like they belong to a night, not to a rotation, so the picker
+   * exhausts everything unseen before it will repeat itself.
+   */
+  seenEventIds: string[];
   log: RunLogEntry[];
   crewRun: Record<string, CrewRunState>;
   pending?: PendingEvent;
@@ -400,6 +448,8 @@ export type Screen =
   | 'city'
   | 'target'
   | 'crew'
+  | 'kit'
+  | 'contacts'
   | 'plan'
   | 'execute'
   | 'report'
@@ -416,6 +466,19 @@ export interface Campaign {
   /** Recruits currently on offer. Refreshes as days pass. */
   market: CrewMember[];
   ownedEquipment: string[];
+  /** Level 1-3 per owned item. Absent means level 1. */
+  equipmentLevels: Record<string, number>;
+  /**
+   * Everyone the player has ever hired, keyed by id, with their loyalty as it
+   * stood when they last walked. Crew below the retention line leave after a
+   * job; this is what lets them be hired back knowing who you are, so loyalty
+   * is a climb rather than a treadmill.
+   */
+  contacts: Record<string, CrewMember>;
+  /** Events already seen this campaign, so situations do not repeat. */
+  seenEventIds: string[];
+  /** Crew who went home after the last job, for the report to name them. */
+  walkedAway?: string[];
   intel: Record<string, Intel[]>;
   scouted: Record<string, number>;
   /** How many times each target has been robbed, and when it was last hit. */

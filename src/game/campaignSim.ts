@@ -35,6 +35,17 @@ export interface CampaignPolicy {
   hireForWeakness: boolean;
   /** Buy equipment when it is affordable. */
   buyKit: boolean;
+  /** Buy the kit the job actually asks for, rather than the cheapest thing. */
+  buyForJob: boolean;
+  /** Put money into levelling the kit already owned. */
+  upgradeKit: boolean;
+  /** Put money into crew stats. */
+  train: boolean;
+  /**
+   * Refuse a job whose expected value does not cover the cost of mounting it,
+   * and wait for targets to recover instead.
+   */
+  minJobValue: number;
 }
 
 export const DEFAULT_POLICY: CampaignPolicy = {
@@ -44,6 +55,10 @@ export const DEFAULT_POLICY: CampaignPolicy = {
   heatCeiling: 62,
   hireForWeakness: true,
   buyKit: true,
+  buyForJob: true,
+  upgradeKit: true,
+  train: true,
+  minJobValue: 18000,
 };
 
 export interface JobRecord {
@@ -63,6 +78,10 @@ export interface JobRecord {
 
 export interface CampaignReport {
   jobs: JobRecord[];
+  /** Turns spent waiting for targets to grow back or Heat to fade. */
+  waited: number;
+  /** Every event id the campaign produced, in order, for repetition checks. */
+  eventsFired: string[];
   finalBankroll: number;
   finalHeat: number;
   finalScore: number;
@@ -125,20 +144,33 @@ export function runCampaign(
   let campaign = C.newCampaign(seed, 'Sim');
   const records: JobRecord[] = [];
   let stalled = 0;
+  let waited = 0;
+  const eventsFired: string[] = [];
   let peakTier = 0;
 
   for (let job = 0; job < jobs; job++) {
     if (campaign.heat > policy.heatCeiling) campaign = C.lieLow(campaign);
 
-    // Hire until the crew is the size the policy wants.
+    // Hire until the crew is the size the policy wants. People you have worked
+    // with before come first: they are cheaper, they already trust you a
+    // little, and rehiring them is how loyalty ever reaches the line where
+    // they stop going home after every job.
     let guard = 0;
-    while (C.activeCrew(campaign).length < policy.crewSize && guard++ < 8) {
+    while (C.activeCrew(campaign).length < policy.crewSize && guard++ < 10) {
       const wanted = policy.hireForWeakness ? neededRole(campaign, policy) : undefined;
-      const affordable = campaign.market
-        .filter((m) => C.hireCost(m, campaign) <= campaign.bankroll * 0.3)
-        .sort((a, b) => a.cost - b.cost);
+      // Below two people there is nothing to be prudent about: a player with
+      // no crew cannot run anything at all, so they spend what it takes to
+      // reach a pair and worry about the rest afterwards.
+      const share = C.activeCrew(campaign).length < 2 ? 0.9 : 0.3;
+      const pool = [...C.contactsAvailable(campaign), ...campaign.market].filter(
+        (m) => C.hireCost(m, campaign) <= campaign.bankroll * share,
+      );
+      const known = pool.filter((m) => campaign.contacts[m.id]);
       const pick =
-        (wanted && affordable.find((m) => m.role === wanted)) ?? affordable[0];
+        (wanted && known.find((m) => m.role === wanted)) ??
+        (wanted && pool.find((m) => m.role === wanted)) ??
+        known.sort((a, b) => b.loyalty - a.loyalty)[0] ??
+        pool.sort((a, b) => a.cost - b.cost)[0];
       if (!pick) break;
       const before = campaign.bankroll;
       campaign = C.hire(campaign, pick.id);
@@ -151,11 +183,23 @@ export function runCampaign(
       continue;
     }
 
-    const choice = pickTarget(campaign, policy);
+    let choice = pickTarget(campaign, policy);
     if (!choice) {
       stalled++;
       campaign = C.lieLow(campaign);
       continue;
+    }
+
+    // Robbing a shop you have already emptied costs days, Heat and a fresh
+    // round of hiring fees to bring home almost nothing. When nothing on the
+    // board clears the bar the policy waits — but only briefly. Modelling a
+    // player with infinite patience makes the game look easier than it is,
+    // because sitting still is where all the free recovery lives.
+    let patience = 0;
+    while (choice.score < policy.minJobValue && patience++ < 2) {
+      campaign = C.lieLow(campaign);
+      waited++;
+      choice = pickTarget(campaign, policy) ?? choice;
     }
 
     const target = C.availableTargets(campaign).find((t) => t.id === choice.targetId)!;
@@ -182,11 +226,47 @@ export function runCampaign(
     }
 
     if (policy.buyKit) {
-      for (const item of [...EQUIPMENT].sort((a, b) => a.cost - b.cost)) {
-        if (campaign.ownedEquipment.includes(item.id)) continue;
-        if (item.cost > campaign.bankroll * 0.25) continue;
-        campaign = C.buyEquipment(campaign, item.id);
-        break;
+      // Buy against what this job actually asks for, cheapest qualifying item
+      // first, before falling back to filling out the toolbox in general.
+      const owned = new Set(campaign.ownedEquipment);
+      const carriedTags = new Set(
+        EQUIPMENT.filter((e) => owned.has(e.id)).map((e) => e.tag),
+      );
+      const wantedTags = policy.buyForJob
+        ? target.needs.filter((n) => !carriedTags.has(n.tag)).map((n) => n.tag)
+        : [];
+
+      const candidates = [...EQUIPMENT]
+        .filter((e) => !owned.has(e.id) && e.cost <= campaign.bankroll * 0.3)
+        .sort((a, b) => a.cost - b.cost);
+      const pick =
+        candidates.find((e) => wantedTags.includes(e.tag)) ??
+        (policy.buyForJob && wantedTags.length ? undefined : candidates[0]);
+      if (pick) campaign = C.buyEquipment(campaign, pick.id);
+
+      if (policy.upgradeKit && campaign.bankroll > 120000) {
+        const upgradable = campaign.ownedEquipment
+          .filter((id) => C.canUpgradeEquipment(campaign, id))
+          .sort((a, b) => C.equipmentUpgradeCost(campaign, a) - C.equipmentUpgradeCost(campaign, b));
+        if (upgradable[0]) campaign = C.upgradeEquipment(campaign, upgradable[0]);
+      }
+    }
+
+    if (policy.train && campaign.bankroll > 90000) {
+      // Spend on the person who leads the thinnest stage, in the attribute
+      // that stage actually tests.
+      const crewNow = C.activeCrew(campaign);
+      const preview = C.planFor(
+        campaign,
+        target.id,
+        choice.approachId,
+        crewNow.map((m) => m.id),
+        campaign.ownedEquipment,
+      );
+      if (preview && preview.crew.length) {
+        const thin = stageOdds(preview).slice().sort((a, b) => a.chance - b.chance)[0];
+        const lead = preview.crew.find((m) => m.id === thin.actorId) ?? preview.crew[0];
+        if (C.canTrain(lead, thin.attr)) campaign = C.train(campaign, lead.id, thin.attr);
       }
     }
 
@@ -207,9 +287,10 @@ export function runCampaign(
 
     const estimate = analysePlan(plan).successChance;
     const runSeed = seedFrom(`${campaign.seed}:${final.targetId}:${campaign.day}`);
-    const run = playOut(plan, runSeed, choosePolicy);
+    const run = playOut(plan, runSeed, choosePolicy, campaign.seenEventIds);
     campaign = C.completeHeist(campaign, run, plan);
 
+    eventsFired.push(...run.firedEventIds);
     const outcome = run.outcome!;
     records.push({
       day: campaign.day,
@@ -236,6 +317,8 @@ export function runCampaign(
     days: campaign.day,
     bankrupt: campaign.bankroll < 3000,
     stalled,
+    waited,
+    eventsFired,
   };
 }
 
@@ -254,6 +337,7 @@ export function summarise(reports: CampaignReport[]) {
     meanDays: mean((r) => r.days),
     meanJobsRun: mean((r) => r.jobs.length),
     meanStalled: mean((r) => r.stalled),
+    meanWaited: mean((r) => r.waited),
     bankruptRate: Math.round((reports.filter((r) => r.bankrupt).length / n) * 100),
     reachedTier2: Math.round((reports.filter((r) => r.peakTier >= 2).length / n) * 100),
     reachedTier3: Math.round((reports.filter((r) => r.peakTier >= 3).length / n) * 100),

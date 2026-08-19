@@ -68,6 +68,10 @@ export const TARGETS: Target[] = [
     security: { guards: 22, cameras: 34, alarm: 40, accessControl: 30, responseTime: 480 },
     publicSecurity: ['cameras', 'guards'],
     approaches: ['stealth', 'social', 'technical', 'aggressive', 'inside'],
+    needs: [
+      { tag: 'entry', stage: 'entry', note: 'The shutter lock is the only thing between the street and the counter.' },
+      { tag: 'cutting', stage: 'objective', critical: true, note: 'It is a floor safe set in concrete. Nobody is talking it open.' },
+    ],
     blurb:
       'Family jewellers on a corner of Vine Street. Two staff, a good safe, and a window display worth more than the safe.',
     weakness: 'The only way out is the street you came in on.',
@@ -90,6 +94,10 @@ export const TARGETS: Target[] = [
     security: { guards: 30, cameras: 42, alarm: 28, accessControl: 44, responseTime: 540 },
     publicSecurity: ['cameras', 'accessControl'],
     approaches: ['social', 'technical', 'stealth', 'inside', 'distraction'],
+    needs: [
+      { tag: 'cover', stage: 'approach', critical: true, note: 'Nine floors of people who will ask who you are unless you look like an answer.' },
+      { tag: 'signal', stage: 'security', note: 'The lobby desk watches six feeds. Give it nothing to watch.' },
+    ],
     blurb:
       'Nine floors of a building that empties at seven. Cash payroll for the haulage contracts sits in a drawer safe until Friday.',
     weakness: 'Nobody on that floor has ever been asked for identification.',
@@ -111,6 +119,11 @@ export const TARGETS: Target[] = [
     security: { guards: 48, cameras: 20, alarm: 30, accessControl: 55, responseTime: 360 },
     publicSecurity: ['guards'],
     approaches: ['aggressive', 'technical', 'distraction', 'stealth'],
+    needs: [
+      { tag: 'vehicle', stage: 'escape', critical: true, note: 'You are taking this on an open road. What you leave in decides everything.' },
+      { tag: 'cutting', stage: 'objective', critical: true, note: 'The rear door is armoured and it is not going to be persuaded.' },
+      { tag: 'comms', stage: 'extraction', note: 'Eleven minutes, three positions, one timing. Somebody has to call it.' },
+    ],
     blurb:
       'A Meridian Security truck runs the haulage yards every Tuesday. Between the third and fourth stop it sits alone for eleven minutes.',
     weakness: 'Eleven minutes is the whole job. There is no version of this that is slow.',
@@ -131,6 +144,11 @@ export const TARGETS: Target[] = [
     security: { guards: 40, cameras: 62, alarm: 66, accessControl: 48, responseTime: 400 },
     publicSecurity: ['cameras'],
     approaches: ['stealth', 'social', 'technical', 'distraction', 'inside'],
+    needs: [
+      { tag: 'entry', stage: 'entry', note: 'The skylight hatch is 1890s ironwork with a modern padlock through it.' },
+      { tag: 'signal', stage: 'security', critical: true, note: 'The alarm reports out of the building. It has to stop reporting.' },
+      { tag: 'surveillance', stage: 'approach', note: 'The upper gallery has a blind arch, if you have watched long enough to find it.' },
+    ],
     blurb:
       'A touring collection sits in the Kestrel for eleven days. The building is Victorian, the alarm system is not.',
     weakness: 'The alarm is beautiful. The skylight is 1890s ironwork.',
@@ -153,6 +171,11 @@ export const TARGETS: Target[] = [
     security: { guards: 52, cameras: 44, alarm: 50, accessControl: 60, responseTime: 300 },
     publicSecurity: ['guards', 'accessControl'],
     approaches: ['social', 'stealth', 'inside', 'aggressive'],
+    needs: [
+      { tag: 'cover', stage: 'approach', critical: true, note: 'Nobody walks onto a berth like that. They are expected, or they are met.' },
+      { tag: 'vehicle', stage: 'escape', critical: true, note: 'A boat has one road off it and it is made of water.' },
+      { tag: 'comms', stage: 'extraction', note: 'Four crew aboard and three decks. Silence is not the same as coordination.' },
+    ],
     blurb:
       'Moored at the deep berth for the season. The owner is not aboard; the safe, the art and four crew are.',
     weakness: 'A boat has one road off it, and it is made of water.',
@@ -175,6 +198,11 @@ export const TARGETS: Target[] = [
     security: { guards: 55, cameras: 70, alarm: 72, accessControl: 66, responseTime: 260 },
     publicSecurity: ['cameras', 'guards', 'alarm'],
     approaches: ['technical', 'inside', 'aggressive', 'stealth', 'distraction'],
+    needs: [
+      { tag: 'cutting', stage: 'objective', critical: true, note: 'A vault door on a time lock. Bring something that argues with steel.' },
+      { tag: 'signal', stage: 'security', critical: true, note: 'The feed runs to a contractor who is paid to be watching it.' },
+      { tag: 'vehicle', stage: 'escape', critical: true, note: 'Four minutes, and the station is two hundred metres away.' },
+    ],
     blurb:
       'Two hundred metres from a police station, which is exactly why the branch keeps a light guard and a heavy vault.',
     weakness: 'Four minutes. Everything about this job is four minutes.',
@@ -197,6 +225,12 @@ export const TARGETS: Target[] = [
     security: { guards: 78, cameras: 84, alarm: 70, accessControl: 76, responseTime: 240 },
     publicSecurity: ['guards', 'cameras', 'accessControl'],
     approaches: ['inside', 'technical', 'distraction', 'aggressive', 'social'],
+    needs: [
+      { tag: 'cover', stage: 'approach', critical: true, note: 'The floor is the safest place in the building, if you belong on it.' },
+      { tag: 'signal', stage: 'security', critical: true, note: 'The eye in the sky is two men whose whole job is looking at you.' },
+      { tag: 'cutting', stage: 'objective', note: 'The count room door is a door. The trolley is not.' },
+      { tag: 'vehicle', stage: 'escape', critical: true, note: 'Their response is faster than the police and less interested in arrest.' },
+    ],
     blurb:
       'The count room behind the Bellweather floor holds the weekend in cash until the Tuesday collection. Their security does not call the police; it deals with things itself.',
     weakness: 'They will not call the police. That is not as good for you as it sounds.',

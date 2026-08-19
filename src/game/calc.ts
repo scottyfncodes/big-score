@@ -2,6 +2,7 @@ import { TRAITS } from '../data/traits';
 import { STAGE_LIST, STAGE_PROFILES } from './stages';
 import type {
   Approach,
+  EquipTag,
   Attribute,
   CrewMember,
   CrewRole,
@@ -109,7 +110,7 @@ export function calculateCrewSynergy(crew: CrewMember[]): {
   }
   if (crew.length > CREW_SOFT_MAX) {
     const over = crew.length - CREW_SOFT_MAX;
-    value -= over * 5;
+    value -= over * 7;
     notes.push(`${crew.length} people is a crowd. Everyone is in someone's way.`);
   }
 
@@ -201,6 +202,36 @@ export function roleGapPenalty(plan: Plan, stage: StageId): number {
   return penalty;
 }
 
+/**
+ * The kit half of coverage.
+ *
+ * Crew gaps and kit gaps work the same way on purpose: neither blocks a plan,
+ * both cost you at the specific stage that needed the thing you did not bring.
+ * A job that says it needs a way through a modern lock is telling you where it
+ * will hurt, not refusing to let you try.
+ */
+export const KIT_GAP_PENALTY = 9;
+export const KIT_GAP_CRITICAL = 16;
+
+export function kitGapPenalty(plan: Plan, stage: StageId): number {
+  const tags = new Set(
+    plan.equipment.filter((e) => !plan.deadKitIds?.includes(e.id)).map((e) => e.tag),
+  );
+  return plan.target.needs
+    .filter((need) => need.stage === stage && !tags.has(need.tag))
+    .reduce((sum, need) => sum + (need.critical ? KIT_GAP_CRITICAL : KIT_GAP_PENALTY), 0);
+}
+
+/** What this job asks for, and whether the player is carrying it. */
+export function kitCoverage(plan: Plan) {
+  const tags = new Set(plan.equipment.map((e) => e.tag));
+  return plan.target.needs.map((need) => ({
+    ...need,
+    covered: tags.has(need.tag),
+    carrying: plan.equipment.find((e) => e.tag === need.tag)?.name,
+  }));
+}
+
 function isRoleRelevant(role: CrewRole, stage: StageId): boolean {
   const map: Record<CrewRole, StageId[]> = {
     driver: ['escape'],
@@ -257,7 +288,8 @@ export function stageScore(
     synergy +
     equipmentBonusFor(stage, plan.equipment, plan.deadKitIds) +
     equipmentAttrBonus(attr, plan.equipment, plan.deadKitIds) -
-    roleGapPenalty(plan, stage);
+    roleGapPenalty(plan, stage) -
+    kitGapPenalty(plan, stage);
   return { score: Math.max(0, total), actorId, attr };
 }
 
@@ -377,7 +409,7 @@ export function calculateHeat(plan: Plan): number {
   // Every extra body is another face, another car, another person who was
   // somewhere they cannot explain. Big crews are louder to the city, not just
   // dearer to pay.
-  heat += Math.max(0, plan.crew.length - 3) * 3;
+  heat += Math.max(0, plan.crew.length - 3) * 4;
   return heat;
 }
 
@@ -408,6 +440,7 @@ export interface PlanAnalysis {
   weakPoint: { stage: StageId; chance: number };
   synergy: { value: number; notes: string[] };
   coverage: { stage: StageId; covered: boolean; role: CrewRole }[];
+  kit: ReturnType<typeof kitCoverage>;
   warnings: string[];
   recommendation: string;
 }
@@ -433,6 +466,16 @@ export function analysePlan(plan: Plan): PlanAnalysis {
   if (plan.crew.length > CREW_SOFT_MAX) {
     warnings.push('More bodies than the job needs. The cut is bigger and so is the noise.');
   }
+  const kit = kitCoverage(plan);
+  for (const need of kit) {
+    if (need.covered) continue;
+    warnings.push(
+      need.critical
+        ? `No ${TAG_WORDS[need.tag]} — ${STAGE_PROFILES[need.stage].name} needs it badly.`
+        : `No ${TAG_WORDS[need.tag]} for ${STAGE_PROFILES[need.stage].name.toLowerCase()}.`,
+    );
+  }
+
   const rumoured = plan.intel.filter((i) => i.confidence !== 'confirmed').length;
   if (rumoured > 0) {
     warnings.push(`${rumoured} piece${rumoured > 1 ? 's' : ''} of intel is unconfirmed.`);
@@ -458,7 +501,19 @@ export function analysePlan(plan: Plan): PlanAnalysis {
     weakPoint,
     synergy,
     coverage,
+    kit,
     warnings,
     recommendation,
   };
 }
+
+/** Short names for kit tags, for warning text. */
+const TAG_WORDS: Record<EquipTag, string> = {
+  comms: 'comms',
+  entry: 'entry tool',
+  cutting: 'cutting gear',
+  signal: 'way to blind the cameras',
+  cover: 'cover story',
+  surveillance: 'surveillance kit',
+  vehicle: 'proper vehicle',
+};

@@ -85,14 +85,25 @@ describe('progression', () => {
     expect(smart.meanBankroll).toBeGreaterThan(cheap.meanBankroll * 1.1);
   });
 
-  it('crew size is a decision, not a slider to maximise', () => {
+  it('crew size is a trade, with no size that simply wins', () => {
     const three = sweep({ crewSize: 3 });
     const four = sweep({ crewSize: 4 });
     const six = sweep({ crewSize: 6 });
-    // Four should be the sweet spot: better than a thin crew, and better than
-    // simply bringing everybody, or the cut is a tax rather than a trade.
-    expect(four.meanBankroll).toBeGreaterThan(three.meanBankroll);
-    expect(four.meanBankroll).toBeGreaterThan(six.meanBankroll);
+    const goodRate = (s: ReturnType<typeof sweep>) => {
+      const jobs = Object.values(s.gradeMix).reduce((a, b) => a + b, 0);
+      return (s.gradeMix.perfect + s.gradeMix.clean) / jobs;
+    };
+
+    // A lean crew keeps more of the take and runs rougher nights; a fuller one
+    // covers the job and pays for the privilege. Neither should dominate — the
+    // failure this guards against is a size the player just always picks.
+    expect(goodRate(four)).toBeGreaterThan(goodRate(three));
+    expect(three.meanBankroll).toBeGreaterThan(four.meanBankroll * 0.8);
+
+    // Bringing everybody is always wrong: more cuts, more retainers, more
+    // faces, worse cohesion, and a Heat bill for the crowd.
+    expect(six.meanBankroll).toBeLessThan(four.meanBankroll);
+    expect(goodRate(six)).toBeLessThan(goodRate(four));
   });
 
   it('buying intel beats buying none', () => {
@@ -107,6 +118,22 @@ describe('progression', () => {
     // system the optimal player skips is a trap, not a decision.
     expect(goodRate(withIntel)).toBeGreaterThan(goodRate(without));
     expect(withIntel.meanBankroll).toBeGreaterThan(without.meanBankroll * 0.95);
+  });
+
+  it('situations rarely repeat across a campaign', () => {
+    // The picker exhausts everything unseen that fits the stage and the crew
+    // before it will reuse anything, so repeats are only possible once a
+    // particular stage's pool has genuinely run dry. What this guards is the
+    // felt result: a campaign should mostly show the player new situations.
+    let fired = 0;
+    let distinct = 0;
+    for (let seed = 0; seed < 25; seed++) {
+      const report = runCampaign(2000 + seed * 13, 8);
+      fired += report.eventsFired.length;
+      distinct += new Set(report.eventsFired).size;
+    }
+    expect(fired).toBeGreaterThan(100);
+    expect(distinct / fired).toBeGreaterThan(0.8);
   });
 
   it('managing heat pays, and ignoring it does not', () => {

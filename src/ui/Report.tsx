@@ -1,10 +1,10 @@
 import { gradeLine } from '../game/news';
-import { nextUnlock } from '../game/campaign';
+import { LOYALTY_RETAIN, nextUnlock } from '../game/campaign';
 import { useStore } from '../state/store';
 import { Hud, Stars, clock, money, shortMoney } from './parts';
 
 export function Report() {
-  const { campaign, dispatch } = useStore();
+  const { campaign, screen, dispatch } = useStore();
   const c = campaign!;
   const result = c.lastReport;
   const story = c.news[0];
@@ -15,7 +15,13 @@ export function Report() {
 
   return (
     <>
-      <Hud title="After" bankroll={c.bankroll} heat={c.heat} day={c.day} />
+      <Hud
+        title="After"
+        bankroll={c.bankroll}
+        heat={c.heat}
+        day={c.day}
+        nav={{ screen, go: (next) => dispatch({ type: 'SCREEN', screen: next }) }}
+      />
       <div className="screen">
         <div className="stack">
           <div className={`verdict verdict--${result.grade}`}>
@@ -80,6 +86,30 @@ export function Report() {
             })}
           </div>
 
+          {c.walkedAway?.length ? (
+            <div className="panel">
+              <div className="eyebrow" style={{ marginBottom: 8 }}>
+                Went home
+              </div>
+              {c.walkedAway.map((id) => {
+                const member = c.contacts[id];
+                if (!member) return null;
+                return (
+                  <div key={id} className="reaction">
+                    <span>{member.name}</span>
+                    <span className="faint num">
+                      {member.loyalty} / {LOYALTY_RETAIN} loyalty
+                    </span>
+                  </div>
+                );
+              })}
+              <p className="faint" style={{ fontSize: 11.5, margin: '10px 0 0', lineHeight: 1.55 }}>
+                Freelancers take the fee and the cut and go. Hire them again and they will
+                remember tonight — at {LOYALTY_RETAIN} loyalty they stay for good.
+              </p>
+            </div>
+          ) : null}
+
           {unlock ? (
             <div className="panel next">
               <div className="eyebrow">Next opportunity</div>
@@ -112,7 +142,7 @@ function Meta({ label, value }: { label: string; value: string }) {
 }
 
 export function NewsRoom() {
-  const { campaign, dispatch } = useStore();
+  const { campaign, screen, dispatch } = useStore();
   const c = campaign!;
   return (
     <>
@@ -122,6 +152,7 @@ export function NewsRoom() {
         bankroll={c.bankroll}
         heat={c.heat}
         day={c.day}
+        nav={{ screen, go: (next) => dispatch({ type: 'SCREEN', screen: next }) }}
       />
       <div className="screen">
         <div className="stack">

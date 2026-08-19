@@ -226,6 +226,36 @@ h4 {
 .stat__value--heat-3 { color: #d4693f; }
 .stat__value--heat-4 { color: var(--red); }
 
+.nav {
+  display: grid;
+  margin: 6px -12px -6px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--board-line);
+  border-bottom: 1px solid var(--board-line);
+}
+
+.nav__item {
+  min-height: 44px;
+  background: var(--ink);
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.nav__item--on {
+  color: var(--gold);
+  background: var(--ink-2);
+  box-shadow: inset 0 -2px 0 var(--gold);
+}
+
+.nav__item:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+}
+
 /* ----------------------------------------------------------------- cards */
 
 .panel {

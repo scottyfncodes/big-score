@@ -16,7 +16,7 @@ import { Hud, Sheet, money, shortMoney } from './parts';
 import type { Campaign, Target } from '../game/types';
 
 export function CityMap() {
-  const { campaign, dispatch, update } = useStore();
+  const { campaign, screen, dispatch, update } = useStore();
   const c = campaign!;
   const [openDistrict, setOpenDistrict] = useState<string | undefined>();
   const [menu, setMenu] = useState(false);
@@ -31,7 +31,13 @@ export function CityMap() {
 
   return (
     <>
-      <Hud title={`Port Argent · ${c.handle}`} bankroll={c.bankroll} heat={c.heat} day={c.day} />
+      <Hud
+        title={`Port Argent · ${c.handle}`}
+        bankroll={c.bankroll}
+        heat={c.heat}
+        day={c.day}
+        nav={{ screen, go: (next) => dispatch({ type: 'SCREEN', screen: next }) }}
+      />
       <div className="screen">
         <div className="stack">
           <div className="city-heat panel">

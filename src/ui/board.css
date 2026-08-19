@@ -239,3 +239,33 @@
   z-index: 20;
   box-shadow: var(--shadow);
 }
+
+.kitrow {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.kitrow:last-child {
+  border-bottom: none;
+}
+
+.kitrow__mark {
+  color: var(--text-faint);
+  font-weight: 700;
+  text-align: center;
+}
+
+.kitrow--ok .kitrow__mark { color: var(--green); }
+.kitrow--bad .kitrow__mark { color: var(--red); }
+.kitrow--bad .kitrow__what { color: var(--red); }
+
+.kitrow__have {
+  font-size: 11.5px;
+  text-align: right;
+}

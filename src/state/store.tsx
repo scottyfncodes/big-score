@@ -158,7 +158,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const seed = seedFrom(`${campaign.seed}:${plan.target.id}:${campaign.day}`);
     dispatch({
       type: 'CAMPAIGN',
-      campaign: { ...campaign, run: startRun(plan, seed) },
+      campaign: { ...campaign, run: startRun(plan, seed, campaign.seenEventIds ?? []) },
     });
     dispatch({ type: 'SCREEN', screen: 'execute' });
   }, [planFromDraft]);
