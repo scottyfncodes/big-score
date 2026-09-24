@@ -1,0 +1,16 @@
+{
+  "name": "The Big Score",
+  "short_name": "Big Score",
+  "description": "A heist strategy game. Put a crew together, buy what you can afford to know, and make the calls on a night that will not go the way you drew it.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#14110F",
+  "theme_color": "#14110F",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
