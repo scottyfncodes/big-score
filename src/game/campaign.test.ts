@@ -124,3 +124,19 @@ describe('campaign', () => {
     expect(a.log).toEqual(b.log);
   });
 });
+
+describe('the label on a lie', () => {
+  it('a lie wears both labels, and the truth wears its own', async () => {
+    const { shownConfidence } = await import('./intel');
+    const shown = new Set<string>();
+    for (let day = 1; day < 40; day++) {
+      shown.add(shownConfidence({ topicId: 'vault', sourceId: 'street', confidence: 'false', reading: '', boughtOnDay: day }));
+    }
+    expect(shown).toEqual(new Set(['confirmed', 'rumored']));
+    const truth = { topicId: 'vault', sourceId: 'street', confidence: 'rumored' as const, reading: '', boughtOnDay: 3 };
+    expect(shownConfidence(truth)).toBe('rumored');
+    // Stable: the same purchase reads the same everywhere.
+    const lie = { ...truth, confidence: 'false' as const };
+    expect(shownConfidence(lie)).toBe(shownConfidence({ ...lie }));
+  });
+});

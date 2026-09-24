@@ -569,13 +569,8 @@ export function completeHeist(campaign: Campaign, run: RunState, plan: Plan): Ca
     crewLines.push({
       id: member.id,
       name: member.name,
-      fate: state?.caught
-        ? 'held'
-        : state?.injured
-          ? 'hurt'
-          : willStay
-            ? 'stayed'
-            : 'walked',
+      fate: state?.caught ? 'held' : willStay ? 'stayed' : 'walked',
+      hurt: Boolean(state?.injured),
       loyaltyDelta: result.loyaltyDeltas[member.id] ?? 0,
       memory: memory.text,
       memoryTone: memory.tone,
@@ -678,7 +673,7 @@ export function completeHeist(campaign: Campaign, run: RunState, plan: Plan): Ca
       day,
       6,
       result.gross > 200000 ? 1 : 0,
-      Object.values(crew).map((r) => r.member.name.split(' ')[0]),
+      takenNames(crew, contacts),
     ),
     completed: [...campaign.completed, plan.target.id],
     news: [story, ...campaign.news].slice(0, 20),
@@ -686,6 +681,19 @@ export function completeHeist(campaign: Campaign, run: RunState, plan: Plan): Ca
     lastReport: banked,
     run: undefined,
   };
+}
+
+/**
+ * First names the recruitment board should not reuse: everyone on the
+ * payroll, and everyone you have worked with. A stranger called Dessie turning
+ * up the day your Dessie walked out reads as the same person, and the whole
+ * point of the contact book is that people are people.
+ */
+function takenNames(crew: Campaign['crew'], contacts: Campaign['contacts']): string[] {
+  return [
+    ...Object.values(crew).map((r) => r.member.name.split(' ')[0]),
+    ...Object.values(contacts ?? {}).map((m) => m.name.split(' ')[0]),
+  ];
 }
 
 export const LIE_LOW_DAYS = 3;
@@ -711,7 +719,7 @@ export function lieLow(campaign: Campaign): Campaign {
       day,
       6,
       0,
-      Object.values(campaign.crew).map((r) => r.member.name.split(' ')[0]),
+      takenNames(campaign.crew, campaign.contacts),
     ),
     crew: Object.fromEntries(
       Object.entries(campaign.crew).map(([id, record]) => [

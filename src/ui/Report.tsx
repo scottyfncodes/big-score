@@ -2,7 +2,7 @@ import { gradeLine } from '../game/news';
 import { LOYALTY_RETAIN, heatTier, nextUnlock } from '../game/campaign';
 import { targetById } from '../data/targets';
 import { useStore } from '../state/store';
-import { Hud, clock, money, shortMoney } from './parts';
+import { Hud, money, shortMoney } from './parts';
 
 export function Report() {
   const { campaign, screen, dispatch } = useStore();
@@ -26,7 +26,7 @@ export function Report() {
       memoryTone: 'neutral' as const,
     }));
   const held = crew.filter((m) => m.fate === 'held').length;
-  const hurt = crew.filter((m) => m.fate === 'hurt').length;
+  const hurt = crew.filter((m) => m.fate === 'hurt' || ('hurt' in m && m.hurt)).length;
 
   const summary =
     result.gross === 0
@@ -66,7 +66,7 @@ export function Report() {
               <strong>{money(result.net)}</strong>
             </div>
             <div className="ledger__meta">
-              <Meta label="On site" value={clock(result.durationSeconds)} />
+              <Meta label="On site" value={`${Math.max(1, Math.round(result.durationSeconds / 60))} min`} />
               <Meta label="Heat" value={`+${result.heat} → ${c.heat}`} />
               <Meta label="Police" value={result.policeContact ? 'On site' : 'Never came'} />
             </div>
@@ -81,6 +81,7 @@ export function Report() {
               <div key={m.id} className="fate">
                 <div className="fate__head">
                   <span className="fate__name">{m.name}</span>
+                  {'hurt' in m && m.hurt ? <span className="fate__chip fate__chip--hurt">Hurt</span> : null}
                   <span className={`fate__chip fate__chip--${m.fate}`}>{FATE_WORDS[m.fate]}</span>
                   <span className={`num fate__loyal ${m.loyaltyDelta >= 0 ? 'good' : 'bad'}`}>
                     {m.loyaltyDelta >= 0 ? '+' : ''}

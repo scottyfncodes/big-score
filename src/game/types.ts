@@ -478,6 +478,8 @@ export interface HeistResult {
     id: string;
     name: string;
     fate: 'home' | 'hurt' | 'held' | 'stayed' | 'walked';
+    /** Injured tonight, whichever way they went afterwards. */
+    hurt?: boolean;
     loyaltyDelta: number;
     memory: string;
     memoryTone: 'good' | 'bad' | 'neutral';

@@ -1,10 +1,10 @@
-import { CALLS, GESTURES, INTEL_HOLDS, LEAD_LINES, LIE_FOUND, PLACES, START_MINUTES, type LeadMood } from '../data/scenes';
+import { CALLS, GESTURES, INTEL_HOLDS, LEAD_LINES, LIE_FOUND, PLACES, START_MINUTES, THEORY, type LeadMood } from '../data/scenes';
 import { TAG_LABELS } from '../data/equipment';
 import { ARCHETYPES } from '../data/crew';
 import { sourceById } from './intel';
 import { randAt } from './rng';
 import { STAGE_PROFILES } from './stages';
-import { OUTCOME_BANDS, pAtLeast, stageOpposition, stageScore, type Plan } from './calc';
+import { OUTCOME_BANDS, pAtLeast, stageOdds, stageOpposition, stageScore, type Plan } from './calc';
 import { TACTICS, canAbort, livePlan, stageRevelations } from './resolve';
 import type { CrewMember, RunState, StageId, StageTactic } from './types';
 import { STAGE_ORDER } from './types';
@@ -231,4 +231,18 @@ export function stageScene(base: Plan, run: RunState): Scene | undefined {
     calls,
     canAbort: canAbort(run),
   };
+}
+
+/**
+ * The plan as a theory the player can hold in their head: who does what, and
+ * which sentence is the one that worries you. Read from the planning board's
+ * own odds, so it believes exactly what the player believes.
+ */
+export function planTheory(plan: Plan): { stage: StageId; text: string; read: Read; chance: number }[] {
+  return stageOdds(plan).map((row) => {
+    const who = first(plan.crew.find((m) => m.id === row.actorId));
+    const read = readFor(row.chance);
+    const strength = read === 'solid' || read === 'likely' ? 'strong' : read === 'even' ? 'fair' : 'weak';
+    return { stage: row.stage, text: THEORY[row.stage][strength].split('{who}').join(who), read, chance: row.chance };
+  });
 }

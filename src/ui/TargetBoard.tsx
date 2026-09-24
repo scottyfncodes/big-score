@@ -13,7 +13,7 @@ import {
   targetAsFound,
   targetHits,
 } from '../game/campaign';
-import { SOURCES, intelCost, scoutCostFor, scoutedSecurity } from '../game/intel';
+import { SOURCES, intelCost, scoutCostFor, scoutedSecurity, shownConfidence } from '../game/intel';
 import { useStore } from '../state/store';
 import { Hud, Sheet, money } from './parts';
 import { STAGE_PROFILES } from '../game/stages';
@@ -212,8 +212,8 @@ export function TargetBoard() {
                     <div className="intel__head">
                       <span className="intel__label">{topic.label}</span>
                       {owned ? (
-                        <span className={`tag ${owned.confidence === 'confirmed' ? 'tag--green' : 'tag--gold'}`}>
-                          {owned.confidence === 'confirmed' ? 'Confirmed' : 'Rumoured'}
+                        <span className={`tag ${shownConfidence(owned) === 'confirmed' ? 'tag--green' : 'tag--gold'}`}>
+                          {shownConfidence(owned) === 'confirmed' ? 'Confirmed' : 'Rumoured'}
                         </span>
                       ) : (
                         <button className="btn btn--sm" onClick={() => setBuying(topic)}>

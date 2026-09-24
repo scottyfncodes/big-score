@@ -269,3 +269,181 @@
   font-size: 11.5px;
   text-align: right;
 }
+
+/* ------------------------------------------------------- the theory */
+
+.theory {
+  position: relative;
+  z-index: 1;
+  margin: 12px 0 14px;
+  font-family: var(--serif);
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--paper-ink);
+}
+
+.theory__line.read--solid,
+.theory__line.read--likely { color: var(--paper-ink); }
+.theory__line.read--even { color: #6b4e10; }
+.theory__line.read--thin,
+.theory__line.read--grim {
+  color: #8d2f20;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: rgba(200, 69, 47, 0.45);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.theory__empty {
+  position: relative;
+  z-index: 1;
+  margin: 12px 0;
+  font-family: var(--serif);
+  font-size: 17px;
+  font-style: italic;
+  color: var(--paper-faded);
+}
+
+.readout__word {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.readout__word .num {
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.numbers-toggle {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin-top: 8px;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--paper-faded);
+  cursor: pointer;
+}
+
+.numbers-toggle input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--red);
+}
+
+.chip__jobs {
+  margin-left: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--gold);
+  border: 1px solid rgba(217, 164, 65, 0.4);
+  border-radius: 999px;
+  padding: 0 5px;
+}
+
+.panel__sub {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-top: 3px;
+}
+
+.plan__gap {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #e09a4e;
+}
+
+.plan__link {
+  margin-top: 10px;
+  padding-left: 0;
+  color: var(--text-dim);
+}
+
+.belief {
+  padding: 10px 12px;
+  border: 1px dashed var(--board-line);
+  border-radius: var(--radius);
+}
+
+.belief__what { font-size: 14px; }
+
+.belief__claim {
+  margin: 6px 0 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  font-style: italic;
+  color: var(--text-dim);
+}
+
+.belief__src { font-size: 11px; letter-spacing: 0.04em; }
+
+.risk {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.risk div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.risk strong { font-size: 16px; font-family: var(--mono); }
+
+.risk__line {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+/* Words for odds, on the dark board. Paper uses the darker set in run.css. */
+.stage__odds.read--solid { color: var(--green); }
+.stage__odds.read--likely { color: #9dbb6a; }
+.stage__odds.read--even { color: var(--gold); }
+.stage__odds.read--thin { color: #e09a4e; }
+.stage__odds.read--grim { color: var(--red); }
+
+.stage__odds {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+/* ------------------------------------------------------ action bar */
+
+.screen--action {
+  padding-bottom: calc(96px + var(--safe-bottom));
+}
+
+.actionbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 25;
+  padding: 10px 14px calc(10px + var(--safe-bottom));
+  background: linear-gradient(rgba(20, 17, 15, 0), var(--ink) 30%);
+}
+
+.actionbar .btn {
+  max-width: 620px;
+  margin: 0 auto;
+  display: flex;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+}
+
+@media (min-width: 900px) {
+  .actionbar { padding-top: 22px; }
+}

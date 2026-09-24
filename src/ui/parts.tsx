@@ -4,6 +4,7 @@ import type { CrewMember, Screen } from '../game/types';
 import { ARCHETYPES } from '../data/crew';
 import { TRAITS } from '../data/traits';
 import { experienceLabel } from '../game/generation';
+import { loyaltyWord } from '../game/memory';
 
 /** Shared furniture. Nothing in here decides anything; it only shows things. */
 
@@ -274,6 +275,18 @@ export function CrewCard({
             </span>
           ))}
         </div>
+        {member.jobsWithYou ? (
+          <div className="crew-card__history">
+            <span className="crew-card__bond">
+              {member.jobsWithYou} job{member.jobsWithYou === 1 ? '' : 's'} with you · {loyaltyWord(member.loyalty)}
+            </span>
+            {member.memories?.[0] ? (
+              <span className={`crew-card__memory crew-card__memory--${member.memories[0].tone}`}>
+                {member.memories[0].text}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
         {footer}
       </div>
       {selected ? <div className="crew-card__check">✓</div> : null}

@@ -146,3 +146,51 @@
   color: var(--gold);
   letter-spacing: 2px;
 }
+
+.crew-card__history {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 8px;
+  padding-top: 7px;
+  border-top: 1px dashed var(--board-line);
+}
+
+.crew-card__bond {
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.crew-card__memory {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.crew-card__memory--bad { color: #e5b3a6; }
+
+.memory {
+  display: flex;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 13px;
+  line-height: 1.45;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.memory:last-of-type { border-bottom: none; }
+
+.memory__day {
+  flex: none;
+  width: 52px;
+  font-size: 11px;
+  color: var(--text-faint);
+  padding-top: 1px;
+}
+
+.memory--bad span:last-child { color: #e5b3a6; }
+.memory--good span:last-child { color: var(--text); }

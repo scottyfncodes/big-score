@@ -101,7 +101,7 @@ const TEMPLATES: HeadlineTemplate[] = [
   },
   {
     id: 'quiet',
-    when: (r) => r.gross < 30000 && r.arrests === 0,
+    when: (r) => r.gross < 30000 && r.arrests === 0 && !r.policeContact,
     weight: 2,
     headline: (c) => `SMALL HAUL IN ${c.districtName.toUpperCase()} BREAK-IN`,
     standfirst: () =>

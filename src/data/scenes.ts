@@ -180,3 +180,40 @@ export const INTEL_HOLDS: Record<string, string> = {
   response: 'The patrol pattern is the one you paid for.',
   insider: 'Your inside name is doing their part.',
 };
+
+/**
+ * The plan, read back as a theory. One sentence per stage, in three strengths.
+ * `{who}` is whoever the engine will put on it.
+ */
+export const THEORY: Record<StageId, { strong: string; fair: string; weak: string }> = {
+  approach: {
+    strong: '{who} walks you in.',
+    fair: '{who} should get you to the door.',
+    weak: 'Getting to the door rests on {who}, and it should not.',
+  },
+  entry: {
+    strong: '{who} has the door.',
+    fair: '{who} can probably open it.',
+    weak: 'The door could beat {who}.',
+  },
+  security: {
+    strong: '{who} owns the cameras.',
+    fair: '{who} should handle the cameras.',
+    weak: 'The cameras are a problem {who} may not solve.',
+  },
+  objective: {
+    strong: '{who} opens the safe.',
+    fair: '{who} can open it, given time.',
+    weak: 'Nobody here can reliably open what you came for.',
+  },
+  extraction: {
+    strong: '{who} walks it out.',
+    fair: '{who} gets it out, probably.',
+    weak: 'Carrying it out is where this comes apart.',
+  },
+  escape: {
+    strong: '{who} drives you home.',
+    fair: '{who} should lose them.',
+    weak: 'If it is loud by the end, {who} will not outrun it.',
+  },
+};

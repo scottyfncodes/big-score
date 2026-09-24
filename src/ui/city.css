@@ -165,3 +165,80 @@
   gap: 8px;
   margin-top: 4px;
 }
+
+/* ---------------------------------------------------- the city talks */
+
+.howto ol {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.howto li + li { margin-top: 4px; }
+.howto strong { color: var(--text); }
+
+.wire {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--board-line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--ink-2);
+}
+
+.wire__head {
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--board-line);
+}
+
+.wire__item {
+  text-align: left;
+  padding: 11px 14px 11px 30px;
+  min-height: 44px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  position: relative;
+}
+
+.wire__item:last-child { border-bottom: none; }
+.wire__item:disabled { cursor: default; opacity: 1; }
+.wire__item:not(:disabled):active { background: var(--ink-3); }
+
+.wire__item::before {
+  content: '';
+  position: absolute;
+  left: 14px;
+  top: 18px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+.wire__item--good::before { background: var(--green); }
+.wire__item--bad::before { background: #e09a4e; }
+.wire__item--hot::before { background: var(--red); box-shadow: 0 0 0 3px rgba(200, 69, 47, 0.25); }
+.wire__item--hot { color: #f0c2b6; }
+
+.tile__status {
+  margin-top: 8px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  padding: 5px 8px;
+  border-radius: 2px;
+  background: rgba(34, 28, 21, 0.06);
+  color: var(--paper-faded);
+  position: relative;
+  z-index: 1;
+}
+
+.tile__status--hot { background: rgba(200, 69, 47, 0.12); color: #8d2f20; font-weight: 600; }
+.tile__status--good { background: rgba(111, 155, 95, 0.14); color: #3f6e33; }
+
+@media (max-width: 719px) {
+  .map__svg { max-height: 250px; }
+}

@@ -53,6 +53,9 @@ export function CrewRoom() {
   const records = crewRecords(c);
   const known = contactsAvailable(c);
   const upkeep = dailyUpkeep(c);
+  const names = Object.fromEntries(
+    Object.values(c.contacts ?? {}).map((m) => [m.id, m.name.split(' ')[0]]),
+  );
 
   return (
     <>
@@ -103,6 +106,7 @@ export function CrewRoom() {
                       setInspect(inspect === record.member.id ? undefined : record.member.id)
                     }
                     expanded={inspect === record.member.id}
+                    names={names}
                   />
                 ))
               )}
@@ -242,7 +246,9 @@ function RosterCard({
   onTrain,
   onInspect,
   expanded,
+  names,
 }: {
+  names: Record<string, string>;
   record: CrewRecord;
   day: number;
   bankroll: number;
@@ -322,6 +328,25 @@ function RosterCard({
             which skill each stage of a job will actually test.
           </p>
 
+          {member.memories?.length ? (
+            <div className="roster__history">
+              <div className="eyebrow" style={{ margin: '14px 0 6px' }}>
+                With you · {member.jobsWithYou ?? 0} job{(member.jobsWithYou ?? 0) === 1 ? '' : 's'}
+              </div>
+              {member.memories.map((m, i) => (
+                <div key={i} className={`memory memory--${m.tone}`}>
+                  <span className="memory__day num">Day {m.day}</span>
+                  <span>{m.text}</span>
+                </div>
+              ))}
+              {partnersOf(member, names).length ? (
+                <p className="faint" style={{ fontSize: 12, margin: '8px 0 0', lineHeight: 1.5 }}>
+                  Has worked with {partnersOf(member, names).join(', ')}.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="roster__traits">
             {member.traits.map((id) => (
               <div key={id} className="roster__trait">
@@ -347,6 +372,14 @@ function RosterCard({
       ) : null}
     </div>
   );
+}
+
+function partnersOf(member: CrewRecord['member'], names: Record<string, string>): string[] {
+  return Object.entries(member.partners ?? {})
+    .filter(([id]) => names[id])
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4)
+    .map(([id, jobs]) => `${names[id]} (${jobs})`);
 }
 
 function Bar({ label, value, color }: { label: string; value: number; color: string }) {

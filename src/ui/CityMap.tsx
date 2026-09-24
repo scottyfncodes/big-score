@@ -6,11 +6,14 @@ import {
   EVIDENCE_COST,
   heatTier,
   lieLow,
+  lieLowRelief,
+  EVIDENCE_HEAT,
+  LIE_LOW_DAYS,
   nextUnlock,
-  targetHits,
   targetValueMultiplier,
   unlockedDistricts,
 } from '../game/campaign';
+import { cityWire, targetStatus } from '../game/city';
 import { useStore } from '../state/store';
 import { Hud, Sheet, money, shortMoney } from './parts';
 import type { Campaign, Target } from '../game/types';
@@ -26,6 +29,7 @@ export function CityMap() {
   const tier = heatTier(c.heat);
   const unlock = nextUnlock(c);
 
+  const wire = useMemo(() => cityWire(c), [c]);
   const byDistrict = (id: string) => targets.filter((t) => t.districtId === id);
   const sheetTargets = openDistrict ? byDistrict(openDistrict) : [];
 
@@ -50,6 +54,34 @@ export function CityMap() {
             </div>
             <p className="city-heat__line dim">{tier.line}</p>
           </div>
+
+          {c.reports.length === 0 && Object.keys(c.crew).length === 0 ? (
+            <div className="howto panel">
+              <div className="eyebrow">How this works</div>
+              <ol>
+                <li><strong>Hire a crew</strong> in the Crew tab. Two at least; four is usually right.</li>
+                <li><strong>Pick a job</strong> below. Read the dossier, buy what you can afford to know.</li>
+                <li><strong>Build the plan</strong> — who is in the room, what they carry.</li>
+                <li><strong>Run the night</strong> one stage at a time. You make the calls.</li>
+              </ol>
+            </div>
+          ) : null}
+
+          {wire.length ? (
+            <div className="wire">
+              <div className="wire__head eyebrow">Word on the street · day {c.day}</div>
+              {wire.map((item) => (
+                <button
+                  key={item.id}
+                  className={`wire__item wire__item--${item.tone}`}
+                  disabled={!item.targetId}
+                  onClick={() => item.targetId && dispatch({ type: 'SELECT_TARGET', targetId: item.targetId })}
+                >
+                  {item.text}
+                </button>
+              ))}
+            </div>
+          ) : null}
 
           <div className="map panel panel--flush">
             <svg viewBox="0 0 100 100" className="map__svg" role="img" aria-label="Map of Port Argent">
@@ -114,17 +146,9 @@ export function CityMap() {
             ))}
           </div>
 
-          <div className="city-actions">
-            <button className="btn btn--sm" onClick={() => dispatch({ type: 'SCREEN', screen: 'crew' })}>
-              Crew
-            </button>
-            <button className="btn btn--sm" onClick={() => dispatch({ type: 'SCREEN', screen: 'news' })}>
-              The Paper
-            </button>
-            <button className="btn btn--sm" onClick={() => setMenu(true)}>
-              Lie Low
-            </button>
-          </div>
+          <button className="btn btn--wide" onClick={() => setMenu(true)}>
+            Cool off · lie low or burn evidence
+          </button>
         </div>
       </div>
 
@@ -163,7 +187,7 @@ export function CityMap() {
                 setMenu(false);
               }}
             >
-              Lie low — 3 days, −14 heat
+              Lie low — {LIE_LOW_DAYS} days, −{Math.min(c.heat, lieLowRelief(c.heat))} heat
             </button>
             <button
               className="btn btn--wide"
@@ -173,7 +197,7 @@ export function CityMap() {
                 setMenu(false);
               }}
             >
-              Destroy evidence — {money(EVIDENCE_COST)}, −18 heat
+              Destroy evidence — {money(EVIDENCE_COST)}, −{EVIDENCE_HEAT} heat
             </button>
             <p className="faint" style={{ fontSize: 12, lineHeight: 1.6 }}>
               Heat drives every building in the city: more guards, faster response, dearer
@@ -203,9 +227,9 @@ function TargetTile({
   // defended. That has to be legible on the tile, or a shrinking number reads
   // as a bug rather than a consequence.
   const multiplier = targetValueMultiplier(campaign, target.id);
-  const hits = targetHits(campaign, target.id);
   const value = Math.round(target.value * multiplier);
   const depleted = multiplier < 0.95;
+  const status = targetStatus(campaign, target);
 
   return (
     <button className="tile" onClick={onOpen}>
@@ -215,12 +239,7 @@ function TargetTile({
       </div>
       <div className="tile__name">{target.name}</div>
       <div className="tile__blurb">{target.blurb}</div>
-      {depleted ? (
-        <div className="tile__hit">
-          Robbed {hits.count === 1 ? 'once' : `${hits.count} times`} · what is left is
-          growing back slowly, and they have improved the locks
-        </div>
-      ) : null}
+      {status ? <div className={`tile__status tile__status--${status.tone}`}>{status.text}</div> : null}
       <div className="tile__foot">
         <span className={`tile__value${depleted ? ' tile__value--down' : ''}`}>
           {money(value)}

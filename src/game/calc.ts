@@ -1,5 +1,6 @@
 import { TRAITS } from '../data/traits';
 import { STAGE_LIST, STAGE_PROFILES } from './stages';
+import { shownConfidence } from './intel';
 import type {
   Approach,
   EquipTag,
@@ -192,7 +193,7 @@ export function believedIntelBonus(plan: Plan, stage: StageId): number {
   return plan.intel.reduce((sum, held) => {
     const topic = plan.target.topics.find((t) => t.id === held.topicId);
     if (!topic || topic.stage !== stage) return sum;
-    return sum + topic.value * (held.confidence === 'rumored' ? 0.75 : 1);
+    return sum + topic.value * (shownConfidence(held) === 'rumored' ? 0.75 : 1);
   }, 0);
 }
 
@@ -494,7 +495,7 @@ export function analysePlan(plan: Plan): PlanAnalysis {
     );
   }
 
-  const rumoured = plan.intel.filter((i) => i.confidence !== 'confirmed').length;
+  const rumoured = plan.intel.filter((i) => shownConfidence(i) !== 'confirmed').length;
   if (rumoured > 0) {
     warnings.push(`${rumoured} piece${rumoured > 1 ? 's' : ''} of intel is unconfirmed.`);
   }

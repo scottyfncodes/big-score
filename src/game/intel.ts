@@ -1,4 +1,4 @@
-import { Stream } from './rng';
+import { Stream, seedFrom } from './rng';
 import type { CrewMember, Intel, IntelSource, IntelTopic, Security, Target } from './types';
 
 /**
@@ -89,6 +89,21 @@ export function displayedConfidence(intel: Intel, stream: Stream): 'confirmed' |
   if (intel.confidence === 'confirmed') return 'confirmed';
   if (intel.confidence === 'rumored') return 'rumored';
   return stream.bool(0.5) ? 'confirmed' : 'rumored';
+}
+
+/**
+ * The label a held piece of intel wears everywhere the player can see it.
+ *
+ * Until this existed the dossier printed the true confidence, so a lie always
+ * read "Rumoured" and "Confirmed" was never wrong — the one place the game is
+ * allowed to deceive the player was telling them the answer. The mask is a
+ * pure function of the purchase, so it reads the same on every screen and
+ * across a reload, and a source's lies are split between the two labels as
+ * `buyIntel` promises.
+ */
+export function shownConfidence(intel: Intel): 'confirmed' | 'rumored' {
+  if (intel.confidence !== 'false') return intel.confidence;
+  return seedFrom(`${intel.topicId}:${intel.sourceId}:${intel.boughtOnDay}`) % 2 === 0 ? 'confirmed' : 'rumored';
 }
 
 export const SCOUT_COST = 1500;
