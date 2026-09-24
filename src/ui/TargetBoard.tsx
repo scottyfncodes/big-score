@@ -65,7 +65,7 @@ export function TargetBoard() {
         day={c.day}
         nav={{ screen, go: (next) => dispatch({ type: 'SCREEN', screen: next }) }}
       />
-      <div className="screen">
+      <div className="screen screen--action">
         <div className="stack">
           <div className="dossier paper">
             <div className="dossier__stamp">{target.type}</div>
@@ -93,39 +93,6 @@ export function TargetBoard() {
                 {target.weakness}
               </p>
             ) : null}
-          </div>
-
-          <div className="panel">
-            <div className="eyebrow" style={{ marginBottom: 8 }}>
-              Approach
-            </div>
-            <div className="stack">
-              {target.approaches.map((id) => {
-                const approach = APPROACHES[id];
-                const locked = !approaches.includes(id);
-                return (
-                  <button
-                    key={id}
-                    className={`approach${draft.approachId === id ? ' approach--on' : ''}${locked ? ' approach--locked' : ''}`}
-                    disabled={locked}
-                    onClick={() => dispatch({ type: 'DRAFT', draft: { approachId: id } })}
-                  >
-                    <div className="approach__name">{approach.name}</div>
-                    <div className="approach__blurb">
-                      {locked ? 'Needs a name on the inside — buy the intel first.' : approach.blurb}
-                    </div>
-                    <div className="approach__tags">
-                      <span className="tag">+{approach.heatBase} heat</span>
-                      {approach.keyRoles.map((role) => (
-                        <span key={role} className="tag">
-                          {role}
-                        </span>
-                      ))}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
           </div>
 
           <div className="panel">
@@ -236,14 +203,50 @@ export function TargetBoard() {
             </p>
           </div>
 
-          <button
-            className="btn btn--primary btn--wide"
-            disabled={!draft.approachId}
-            onClick={() => dispatch({ type: 'SCREEN', screen: 'plan' })}
-          >
-            {draft.approachId ? 'Build the plan' : 'Choose an approach'}
-          </button>
+          <div className="panel">
+            <div className="eyebrow" style={{ marginBottom: 8 }}>
+              Approach
+            </div>
+            <div className="stack">
+              {target.approaches.map((id) => {
+                const approach = APPROACHES[id];
+                const locked = !approaches.includes(id);
+                return (
+                  <button
+                    key={id}
+                    className={`approach${draft.approachId === id ? ' approach--on' : ''}${locked ? ' approach--locked' : ''}`}
+                    disabled={locked}
+                    onClick={() => dispatch({ type: 'DRAFT', draft: { approachId: id } })}
+                  >
+                    <div className="approach__name">{approach.name}</div>
+                    <div className="approach__blurb">
+                      {locked ? 'Needs a name on the inside — buy the intel first.' : approach.blurb}
+                    </div>
+                    <div className="approach__tags">
+                      <span className="tag">+{approach.heatBase} heat</span>
+                      {approach.keyRoles.map((role) => (
+                        <span key={role} className="tag">
+                          {role}
+                        </span>
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
         </div>
+      </div>
+
+      <div className="actionbar">
+        <button
+          className="btn btn--primary btn--wide go"
+          disabled={!draft.approachId}
+          onClick={() => dispatch({ type: 'SCREEN', screen: 'plan' })}
+        >
+          {draft.approachId ? `Build the plan · ${APPROACHES[draft.approachId].name}` : 'Choose an approach below'}
+        </button>
       </div>
 
       {buying ? (
@@ -266,10 +269,13 @@ export function TargetBoard() {
                     <div className="source__name">{source.name}</div>
                     <div className="source__desc faint">
                       {source.reliability > 80
-                        ? 'Expensive, careful, and has never sold you a story.'
+                        ? 'Expensive and careful.'
                         : source.reliability > 55
                           ? 'Usually right. Occasionally guessing, and says so.'
                           : 'Cheap. Certain. Not the same thing as correct.'}
+                    </div>
+                    <div className="source__record">
+                      {sourceLine(c.sourceRecord?.[source.id])}
                     </div>
                   </div>
                   <span className="money">{money(cost)}</span>
@@ -281,4 +287,12 @@ export function TargetBoard() {
       ) : null}
     </>
   );
+}
+
+/** What a fixer's record looks like from where the player is standing. */
+function sourceLine(record?: { sold: number; lies: number }): string {
+  if (!record || record.sold === 0) return 'You have not bought from them yet.';
+  const sold = `Sold you ${record.sold} file${record.sold === 1 ? '' : 's'}`;
+  if (record.lies === 0) return `${sold}. None has been wrong yet.`;
+  return `${sold}. ${record.lies} turned out to be a lie.`;
 }

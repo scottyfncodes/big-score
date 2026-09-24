@@ -235,3 +235,9 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
+
+.source__record {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--gold);
+}

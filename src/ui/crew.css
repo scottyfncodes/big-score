@@ -153,25 +153,26 @@
   gap: 3px;
   margin-top: 8px;
   padding-top: 7px;
-  border-top: 1px dashed var(--board-line);
+  border-top: 1px dashed rgba(34, 28, 21, 0.25);
 }
 
 .crew-card__bond {
   font-size: 10.5px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: #8a6412;
+  font-weight: 700;
 }
 
 .crew-card__memory {
   font-family: var(--serif);
   font-style: italic;
-  font-size: 13px;
+  font-size: 13.5px;
   line-height: 1.4;
-  color: var(--text);
+  color: var(--paper-ink);
 }
 
-.crew-card__memory--bad { color: #e5b3a6; }
+.crew-card__memory--bad { color: #8d2f20; }
 
 .memory {
   display: flex;

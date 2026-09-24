@@ -11,7 +11,7 @@ export function Report() {
   const story = c.news[0];
 
   if (!result) return null;
-  const grade = gradeLine(result.grade);
+  const grade = gradeLine(result.grade, result);
   const unlock = nextUnlock(c);
   const target = result.targetId ? targetById(result.targetId) : undefined;
   const tier = heatTier(c.heat);

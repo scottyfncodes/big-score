@@ -76,6 +76,29 @@ rotation changes and the inside man does not stay inside. Together those mean
 the correct play is always to move on, which is what the districts and the tier
 ladder are for.
 
+**The night is played, not watched.** Each stage opens as a situation — the
+time, the place, who is about to do the work and what they say — and the
+player makes a call: take your time, go as drawn, or push. Steady is the
+engine exactly as it was balanced; careful buys the check with minutes and a
+little noise, push buys minutes with the check. Which is right depends on
+whether anybody outside is counting yet, and `tactics.test.ts` holds that
+shape: no single call wins everywhere, and reading the room beats all three.
+Until the objective is done, the job can be called off.
+
+**The player always finds out why.** A lie bought from a fixer and a tool
+that failed its reliability roll were both decided before the crew left the
+van. They are revealed at the stage they hurt, in words that name the source
+or the item, before the player makes the call. Sources build a track record
+across the campaign, and intel labels wear a mask — a lie is as likely to
+read "Confirmed" as "Rumoured".
+
+**Crew remember, and so does the city.** Everyone on a job takes one line
+home — the situation they were named in, the stage they carried or dropped —
+and keeps it through walking and being rehired. The city screen reads
+depletion, hardening, custody and openings back as things the city is
+saying, and the aftermath separates what the paper thinks happened from what
+you know.
+
 ## Layout
 
 ```
@@ -90,9 +113,12 @@ src/
     intel.ts       buying information, and being lied to
     generation.ts  crew
     news.ts        the paper
+    scene.ts       each stage staged as a situation; the plan as a theory
+    memory.ts      what crew take home from a job
+    city.ts        what the city says between jobs
     sim.ts         headless balance harness
   data/        content as plain objects: targets, crew, equipment,
-               approaches, traits, events, narration, districts
+               approaches, traits, events, narration, districts, scenes
   state/       React store + versioned localStorage persistence
   ui/          screens and CSS. Calculates nothing.
 ```

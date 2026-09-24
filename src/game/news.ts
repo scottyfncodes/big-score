@@ -204,7 +204,19 @@ function buildBody(ctx: NewsContext, stream: Stream): string {
 }
 
 /** The line the post-heist report leads with. Grade first, then the number. */
-export function gradeLine(grade: Grade): { label: string; line: string } {
+export function gradeLine(grade: Grade, result?: HeistResult): { label: string; line: string } {
+  // A grade is a band; the line under it has to agree with the night. A
+  // catastrophe where nobody was caught is a different catastrophe.
+  if (result && result.gross === 0) {
+    return grade === 'clean'
+      ? { label: 'CALLED OFF', line: 'Nobody saw a thing. There was nothing to see.' }
+      : { label: 'ABANDONED', line: 'You got out with nothing but everybody.' };
+  }
+  if (result && (grade === 'catastrophic' || grade === 'botched') && result.arrests === 0) {
+    return grade === 'catastrophic'
+      ? { label: 'CATASTROPHIC', line: 'Everybody got out. Almost nothing came with them.' }
+      : { label: 'BOTCHED', line: 'Nobody in a cell, and that is the best thing about tonight.' };
+  }
   switch (grade) {
     case 'perfect':
       return { label: 'PERFECT', line: 'Nobody saw a thing. Nobody will.' };

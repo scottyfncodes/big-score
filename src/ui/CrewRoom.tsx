@@ -91,7 +91,11 @@ export function CrewRoom() {
             ) : null}
             <div className="grid" style={{ marginTop: 12 }}>
               {records.length === 0 ? (
-                <Empty>Nobody works for you yet. Try the Hire tab.</Empty>
+                <Empty>
+                  {known.length
+                    ? `Everyone went home after the last job. ${known.length} ${known.length === 1 ? 'person you know is' : 'people you know are'} on the Hire tab, and they remember you.`
+                    : 'Nobody works for you yet. Try the Hire tab.'}
+                </Empty>
               ) : (
                 records.map((record) => (
                   <RosterCard
@@ -135,8 +139,9 @@ export function CrewRoom() {
                         footer={
                           <div className="crew-card__foot">
                             <span>
-                              {member.jobsWithYou ?? 0} job{(member.jobsWithYou ?? 0) === 1 ? '' : 's'} with you ·{' '}
-                              {member.loyalty} loyalty
+                              {member.loyalty >= LOYALTY_RETAIN
+                                ? 'Will stay on the payroll'
+                                : `${member.loyalty}/${LOYALTY_RETAIN} loyalty to stay`}
                             </span>
                             <strong className="num">{money(cost)}</strong>
                           </div>
