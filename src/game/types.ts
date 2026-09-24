@@ -111,6 +111,21 @@ export interface CrewMember {
   jobsWithYou?: number;
   bio: string;
   hiredOnDay?: number;
+  /**
+   * What this person has done on your jobs, newest first. Short, derived from
+   * the run log, and capped — this is how a generated stat block turns into
+   * somebody the player remembers.
+   */
+  memories?: CrewMemory[];
+  /** Jobs run alongside each other crew member, by id. Survives a rehire. */
+  partners?: Record<string, number>;
+}
+
+export interface CrewMemory {
+  day: number;
+  targetId: string;
+  text: string;
+  tone: 'good' | 'bad' | 'neutral';
 }
 
 export type CrewCondition = 'ready' | 'injured' | 'burned' | 'arrested' | 'dead';
@@ -298,7 +313,17 @@ export interface StageResult {
   detail: string;
   timeSpent: number;
   noiseAdded: number;
+  /** The call the player made going into the stage. Absent means steady. */
+  tactic?: StageTactic;
 }
+
+/**
+ * The call the player makes as each stage begins. Steady is the plan as drawn
+ * and resolves exactly as the engine always has; the other two trade time and
+ * noise against the check, which is the "has anyone noticed yet" question
+ * turned into a decision the player makes six times a night.
+ */
+export type StageTactic = 'careful' | 'steady' | 'push';
 
 export interface EventChoice {
   id: string;
@@ -361,10 +386,15 @@ export interface EventContext {
 }
 
 export interface RunLogEntry {
-  kind: 'stage' | 'event' | 'note';
+  kind: 'stage' | 'event' | 'note' | 'reveal';
   stage: StageId;
   text: string;
   tone: 'good' | 'bad' | 'neutral' | 'great' | 'awful';
+  /** Who this beat happened to, when it happened to somebody. */
+  actorId?: string;
+  /** Set on event resolutions, so the aftermath can name the situation. */
+  eventId?: string;
+  outcome?: StageOutcome;
 }
 
 export interface PendingEvent {
@@ -411,6 +441,14 @@ export interface RunState {
   log: RunLogEntry[];
   crewRun: Record<string, CrewRunState>;
   pending?: PendingEvent;
+  /**
+   * Intel that turned out to be a lie, and kit that turned out to be dead,
+   * once the night has shown the player. Both were decided at the start; this
+   * is the record of when the player found out, which is what lets a failure
+   * be traced back to the fixer or the purchase that caused it.
+   */
+  revealedLies?: { topicId: string; sourceId: string; stage: StageId }[];
+  revealedDeadKit?: string[];
   /** Set once the run is over, however it ended. */
   outcome?: HeistResult;
 }
@@ -431,6 +469,21 @@ export interface HeistResult {
   loyaltyDeltas: Record<string, number>;
   headline: string;
   standfirst: string;
+  /** Filled in when the job is banked, for the aftermath. */
+  targetId?: string;
+  day?: number;
+  aborted?: boolean;
+  /** What happened to each person, and the line they took home from it. */
+  crew?: {
+    id: string;
+    name: string;
+    fate: 'home' | 'hurt' | 'held' | 'stayed' | 'walked';
+    loyaltyDelta: number;
+    memory: string;
+    memoryTone: 'good' | 'bad' | 'neutral';
+  }[];
+  /** Lies and dead kit the night exposed — the answers to "why". */
+  exposed?: string[];
 }
 
 export interface NewsStory {
@@ -480,6 +533,12 @@ export interface Campaign {
   /** Crew who went home after the last job, for the report to name them. */
   walkedAway?: string[];
   intel: Record<string, Intel[]>;
+  /**
+   * What each intel source has sold you and how much of it the night proved
+   * wrong. Reliability is never shown as a number; this track record is how
+   * the player learns it.
+   */
+  sourceRecord?: Record<string, { sold: number; lies: number }>;
   scouted: Record<string, number>;
   /** How many times each target has been robbed, and when it was last hit. */
   hits: Record<string, { count: number; lastDay: number }>;

@@ -3,6 +3,8 @@ import { NARRATION } from '../data/narration';
 import { generateNewsReport } from './news';
 import { Stream } from './rng';
 import { STAGE_PROFILES } from './stages';
+import { sourceById } from './intel';
+import { EQUIPMENT } from '../data/equipment';
 import {
   OUTCOME_BANDS,
   SWING,
@@ -27,6 +29,7 @@ import type {
   StageId,
   StageOutcome,
   StageResult,
+  StageTactic,
 } from './types';
 import { STAGE_ORDER } from './types';
 
@@ -157,16 +160,98 @@ function kitMul(plan: Plan, run: RunState, key: 'noiseMul' | 'timeMul'): number 
     .reduce((mul, e) => mul * (e[key] ?? 1), 1);
 }
 
+/**
+ * The three calls a player can make going into a stage.
+ *
+ * Steady is the plan as drawn and is the identity: every balance table in the
+ * test suite was measured against it and still is. The other two are trades
+ * on the same axis the whole engine is built on — time against noise against
+ * the check — so which one is right depends on whether anybody outside is
+ * counting yet.
+ *
+ * Careful buys the check with minutes and a flat helping of noise: lingering
+ * is its own kind of conspicuous, and a crew that takes its time is a crew
+ * somebody might walk past. Before exposure that noise is the cost; after it,
+ * the minutes are. Push is the opposite: fast, loud, and worse.
+ */
+export const TACTICS: Record<
+  StageTactic,
+  { score: number; timeMul: number; noiseMul: number; noiseFlat: number; complication: number }
+> = {
+  careful: { score: 9, timeMul: 1.6, noiseMul: 1, noiseFlat: 6, complication: 0.05 },
+  steady: { score: 0, timeMul: 1, noiseMul: 1, noiseFlat: 0, complication: 0 },
+  push: { score: -8, timeMul: 0.55, noiseMul: 1.6, noiseFlat: 0, complication: 0 },
+};
+
+/**
+ * Lies and dead kit that this stage is about to find out about.
+ *
+ * Both were decided before the crew left the van — the lie when it was bought,
+ * the kit on its reliability roll at the start of the run. Neither changes
+ * here. What changes is that the player is told, at the stage it hurt, in
+ * words that name the purchase. A hidden tax is not a mechanic; a lie you can
+ * trace back to the fixer who sold it is.
+ */
+export function stageRevelations(
+  base: Plan,
+  run: RunState,
+  stage: StageId,
+): { lies: { topicId: string; sourceId: string }[]; deadKit: string[] } {
+  const revealedTopics = new Set((run.revealedLies ?? []).map((l) => l.topicId));
+  const lies = base.intel
+    .filter((held) => held.confidence === 'false' && !revealedTopics.has(held.topicId))
+    .filter((held) => base.target.topics.find((t) => t.id === held.topicId)?.stage === stage)
+    .map((held) => ({ topicId: held.topicId, sourceId: held.sourceId }));
+
+  const revealedKit = new Set(run.revealedDeadKit ?? []);
+  const deadKit = base.equipment
+    .filter((e) => run.deadKitIds.includes(e.id) && !revealedKit.has(e.id))
+    .filter(
+      (e) =>
+        (e.bonus[stage] ?? 0) > 0 ||
+        base.target.needs.some((n) => n.stage === stage && n.tag === e.tag),
+    )
+    .map((e) => e.id);
+
+  return { lies, deadKit };
+}
+
+function revealLog(base: Plan, stage: StageId, found: ReturnType<typeof stageRevelations>): RunLogEntry[] {
+  const out: RunLogEntry[] = [];
+  for (const lie of found.lies) {
+    const topic = base.target.topics.find((t) => t.id === lie.topicId);
+    const source = sourceById(lie.sourceId)?.name ?? 'Somebody';
+    out.push({
+      kind: 'reveal',
+      stage,
+      tone: 'awful',
+      text: `${topic?.label ?? 'The intel'} was wrong. ${source} sold you a story, and the crew planned around it.`,
+    });
+  }
+  for (const id of found.deadKit) {
+    const item = base.equipment.find((e) => e.id === id) ?? EQUIPMENT.find((e) => e.id === id);
+    out.push({
+      kind: 'reveal',
+      stage,
+      tone: 'bad',
+      text: `The ${item?.name ?? 'kit'} is dead. Whatever was supposed to happen when somebody switched it on, did not.`,
+    });
+  }
+  return out;
+}
+
 /** The one place a stage is resolved. Returns a new run — nothing mutates. */
-export function resolveStage(base: Plan, run: RunState): RunState {
+export function resolveStage(base: Plan, run: RunState, tactic: StageTactic = 'steady'): RunState {
   if (run.outcome || run.pending) return run;
 
   const stage = STAGE_ORDER[run.stageIndex];
   const profile = STAGE_PROFILES[stage];
   const plan = livePlan(base, run);
   const stream = new Stream(run.seed, run.cursor);
+  const call = TACTICS[tactic];
 
-  const { score, actorId, attr } = stageScore(plan, stage);
+  const { score: rawScore, actorId, attr } = stageScore(plan, stage);
+  const score = Math.max(0, rawScore + call.score);
   const opposition = stageOpposition(plan, stage, false);
   const roll = stream.swing(SWING);
   const margin = Math.round(score - opposition + roll);
@@ -176,16 +261,25 @@ export function resolveStage(base: Plan, run: RunState): RunState {
   // both directions.
   if (
     (outcome === 'success' || outcome === 'critical') &&
-    stream.bool(calculateComplicationChance(plan))
+    stream.bool(Math.min(0.8, calculateComplicationChance(plan) + call.complication))
   ) {
     outcome = 'complication';
   }
 
   const timeSpent = Math.round(
-    profile.baseTime * plan.approach.timeMul * kitMul(plan, run, 'timeMul') * OUTCOME_TIME[outcome],
+    profile.baseTime *
+      plan.approach.timeMul *
+      kitMul(plan, run, 'timeMul') *
+      OUTCOME_TIME[outcome] *
+      call.timeMul,
   );
   const noiseAdded = Math.round(
-    profile.baseNoise * plan.approach.noiseMul * kitMul(plan, run, 'noiseMul') * OUTCOME_NOISE[outcome],
+    profile.baseNoise *
+      plan.approach.noiseMul *
+      kitMul(plan, run, 'noiseMul') *
+      OUTCOME_NOISE[outcome] *
+      call.noiseMul +
+      call.noiseFlat,
   );
 
   let next: RunState = {
@@ -210,14 +304,30 @@ export function resolveStage(base: Plan, run: RunState): RunState {
     detail: narration.detail,
     timeSpent,
     noiseAdded,
+    ...(tactic !== 'steady' ? { tactic } : {}),
   };
 
   next = applyStageEffects(next, plan, result, stream);
   next.cursor = stream.cursor;
   next.results = [...run.results, result];
+  const found = stageRevelations(base, run, stage);
+  if (found.lies.length) {
+    next.revealedLies = [...(run.revealedLies ?? []), ...found.lies.map((l) => ({ ...l, stage }))];
+  }
+  if (found.deadKit.length) {
+    next.revealedDeadKit = [...(run.revealedDeadKit ?? []), ...found.deadKit];
+  }
   next.log = [
     ...run.log,
-    { kind: 'stage', stage, tone: TONE[outcome], text: `${profile.name}: ${narration.detail}` },
+    ...revealLog(base, stage, found),
+    {
+      kind: 'stage',
+      stage,
+      tone: TONE[outcome],
+      text: `${profile.name}: ${narration.detail}`,
+      actorId,
+      outcome,
+    },
   ];
 
   next = checkExposure(next, stage);
@@ -514,8 +624,10 @@ export function chooseEventOption(base: Plan, run: RunState, choiceId: string): 
     {
       kind: 'event',
       stage: run.pending.stage,
-      tone: passed ? 'good' : 'bad',
+      tone: eventTone(resolution, passed),
       text: resolution.text,
+      actorId: run.pending.actorId,
+      eventId: run.pending.eventId,
     },
   ];
 
@@ -526,6 +638,51 @@ export function chooseEventOption(base: Plan, run: RunState, choiceId: string): 
   next = checkExposure(next, run.pending.stage);
 
   return advanceOrFinish(next, base);
+}
+
+/**
+ * How a resolution reads. A certain choice with a cost is not a failure, and
+ * one that trips the alarm or loses somebody is worse than a missed check.
+ */
+function eventTone(res: EventResolution, passed: boolean): RunLogEntry['tone'] {
+  if (res.capture || res.separate || res.abort) return 'awful';
+  if (res.alarm || res.injure) return 'bad';
+  if ((res.bonusTake ?? 0) > 0 || (res.heat ?? 0) < 0) return 'great';
+  return passed ? 'good' : 'bad';
+}
+
+/**
+ * Walking away. Only offered before the objective is done — after that the
+ * bags are the point, and the only way out is through the rest of the night.
+ * If nobody noticed yet, nobody was ever there; if the alarm is already out,
+ * it is still a retreat, and the city still saw something.
+ */
+export function canAbort(run: RunState): boolean {
+  return !run.outcome && !run.pending && run.stageIndex <= STAGE_ORDER.indexOf('objective');
+}
+
+export function abortRun(base: Plan, run: RunState): RunState {
+  if (!canAbort(run)) return run;
+  const stage = STAGE_ORDER[run.stageIndex];
+  return finishRun(
+    base,
+    {
+      ...run,
+      stageIndex: STAGE_ORDER.length,
+      log: [
+        ...run.log,
+        {
+          kind: 'note',
+          stage,
+          tone: 'neutral',
+          text: run.exposedAt !== null
+            ? 'You make the call on the radio. Everyone out, empty-handed, with the building already awake behind you.'
+            : 'You make the call on the radio. Everyone out, empty-handed, the way they came in.',
+        },
+      ],
+    },
+    true,
+  );
 }
 
 /** Event resolutions are the only thing besides a stage that moves the world. */
@@ -732,7 +889,11 @@ export function finishRun(base: Plan, run: RunState, aborted: boolean): RunState
         kind: 'note',
         stage: 'escape',
         tone: grade === 'perfect' || grade === 'clean' ? 'great' : grade === 'messy' ? 'neutral' : 'awful',
-        text: aborted ? 'You called it off. Nobody was there. Nobody was ever there.' : 'Out.',
+        text: aborted
+          ? run.exposedAt === null
+            ? 'Nobody was there. Nobody was ever there.'
+            : 'Somebody is going to spend a week wondering what that was.'
+          : 'Out.',
       },
     ],
   };
@@ -763,6 +924,7 @@ export function playOut(
   seed: number,
   choose: (event: GameEvent, ctx: EventContext) => string,
   seenEventIds: string[] = [],
+  tactic: (run: RunState) => StageTactic = () => 'steady',
 ): RunState {
   let run = startRun(base, seed, seenEventIds);
   let guard = 0;
@@ -776,7 +938,7 @@ export function playOut(
       }
       run = chooseEventOption(base, run, choose(pending.event, pending.ctx));
     } else {
-      run = resolveStage(base, run);
+      run = resolveStage(base, run, tactic(run));
     }
   }
   return run;

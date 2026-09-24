@@ -61,17 +61,25 @@ const TEMPLATES: HeadlineTemplate[] = [
   },
   {
     id: 'violent',
-    when: (r) => r.grade === 'messy' || r.grade === 'botched',
+    when: (r) => (r.grade === 'messy' || r.grade === 'botched') && r.policeContact,
     weight: 3,
     headline: (c) => `PANIC AT ${c.target.name.toUpperCase()}`,
     standfirst: (c) =>
-      `Staff describe a loud, fast robbery lasting under ${Math.max(2, Math.round(c.result.durationSeconds / 60))} minutes. Nobody was seriously hurt.`,
+      `Witnesses describe sirens and running within ${Math.max(2, Math.round(c.result.durationSeconds / 60))} minutes of the first alarm. ${c.result.injuries > 0 ? 'Police believe at least one of those responsible was hurt.' : 'Nobody was seriously hurt.'}`,
+  },
+  {
+    id: 'untidy',
+    when: (r) => (r.grade === 'messy' || r.grade === 'botched') && !r.policeContact,
+    weight: 3,
+    headline: (c) => `BREAK-IN AT ${c.target.name.toUpperCase()} “NOT PROFESSIONAL”`,
+    standfirst: (c) =>
+      `Detectives say whoever entered ${c.target.name} left damage, a mess, and ${c.money} poorer premises. "They got lucky," one officer said.`,
   },
   {
     id: 'arrest',
     when: (r) => r.arrests > 0,
     weight: 5,
-    headline: () => 'ONE HELD AFTER BOTCHED ROBBERY',
+    headline: (c) => `${c.result.arrests === 1 ? 'ONE' : c.result.arrests === 2 ? 'TWO' : 'SUSPECTS'} HELD AFTER BOTCHED ROBBERY`,
     standfirst: (c) =>
       `Police confirm a suspect is in custody following the incident at ${c.target.name}. A search for others is under way.`,
   },
@@ -101,6 +109,20 @@ const TEMPLATES: HeadlineTemplate[] = [
   },
 ];
 
+const NOTHING_TAKEN: HeadlineTemplate = {
+  id: 'nothing',
+  when: (r) => r.gross === 0,
+  weight: 1,
+  headline: (c) =>
+    c.result.policeContact || c.result.grade !== 'clean'
+      ? `ATTEMPTED RAID AT ${c.target.name.toUpperCase()}`
+      : `${c.target.name.toUpperCase()}: “SOMEONE WAS HERE”`,
+  standfirst: (c) =>
+    c.result.grade === 'clean'
+      ? 'Staff found marks on a door and nothing missing. Police are treating it as a failed attempt, or a very careful look.'
+      : `An alarm at ${c.target.name} brought officers to ${c.districtName} overnight. Nothing was taken, and nobody was there when they arrived.`,
+};
+
 export function generateNewsReport(args: {
   result: HeistResult;
   target: Target;
@@ -119,7 +141,9 @@ export function generateNewsReport(args: {
     crew: args.crew,
   };
 
-  const eligible = TEMPLATES.filter((t) => t.when(args.result));
+  // A job called off before anything was taken is a different story, and
+  // printing "$0 GONE" over it is the paper not reading the game.
+  const eligible = args.result.gross === 0 ? [NOTHING_TAKEN] : TEMPLATES.filter((t) => t.when(args.result));
   const chosen = stream.weighted(eligible.length ? eligible : [TEMPLATES[7]]) ?? TEMPLATES[7];
 
   const body = buildBody(ctx, stream);
@@ -148,7 +172,9 @@ function buildBody(ctx: NewsContext, stream: Stream): string {
   const { result, target, districtName } = ctx;
 
   parts.push(
-    `Officers were called to ${target.name} in ${districtName}. The premises had been entered and a quantity of property removed.`,
+    result.gross === 0
+      ? `Officers attended ${target.name} in ${districtName}. Nothing is believed to have been taken.`
+      : `Officers were called to ${target.name} in ${districtName}. The premises had been entered and a quantity of property removed.`,
   );
 
   if (result.policeContact) {
@@ -165,6 +191,12 @@ function buildBody(ctx: NewsContext, stream: Stream): string {
 
   if (result.injuries > 0) {
     parts.push('Blood recovered at the scene has been sent for analysis.');
+  }
+
+  if (result.arrests > 0) {
+    parts.push(
+      `${result.arrests === 1 ? 'The person in custody has' : 'Those in custody have'} so far declined to answer questions.`,
+    );
   }
 
   parts.push(stream.pick(CLOSERS));

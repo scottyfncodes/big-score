@@ -10,8 +10,8 @@ import {
 } from 'react';
 import * as C from '../game/campaign';
 import { seedFrom } from '../game/rng';
-import { chooseEventOption, resolveStage, startRun } from '../game/resolve';
-import type { ApproachId, Campaign, Screen } from '../game/types';
+import { abortRun, chooseEventOption, resolveStage, startRun } from '../game/resolve';
+import type { ApproachId, Campaign, Screen, StageTactic } from '../game/types';
 import { clearCampaign, hasSave, loadCampaign, saveCampaign } from './persistence';
 
 /**
@@ -61,7 +61,13 @@ function reducer(state: State, action: Action): State {
     case 'CONTINUE': {
       const campaign = loadCampaign();
       if (!campaign) return state;
-      return { ...state, campaign, screen: campaign.run ? 'execute' : 'city' };
+      // A heist in progress carries its own plan; put the draft back to match
+      // it so that Back from the report lands on the same job.
+      const run = campaign.run;
+      const draft = run
+        ? { targetId: run.targetId, approachId: run.approachId, crewIds: run.crewIds, equipmentIds: run.equipmentIds }
+        : emptyDraft;
+      return { ...state, campaign, draft, screen: run ? 'execute' : 'city' };
     }
     case 'RESET':
       clearCampaign();
@@ -120,7 +126,8 @@ interface Store extends State {
   dispatch: (a: Action) => void;
   update: (fn: (c: Campaign) => Campaign) => void;
   beginHeist: () => void;
-  nextStage: () => void;
+  nextStage: (tactic?: StageTactic) => void;
+  abort: () => void;
   choose: (choiceId: string) => void;
   bankHeist: () => void;
 }
@@ -163,36 +170,55 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SCREEN', screen: 'execute' });
   }, [planFromDraft]);
 
-  const nextStage = useCallback(() => {
+  // Once a run exists, the run is the plan. Reading it back from the draft
+  // meant a reload mid-heist rendered nothing at all: the draft lives in
+  // memory and the run lives in the save.
+  const planFromRun = useCallback(() => {
     const { campaign } = stateRef.current;
-    const plan = planFromDraft();
-    if (!campaign?.run || !plan || campaign.run.outcome) return;
-    dispatch({
-      type: 'CAMPAIGN',
-      campaign: { ...campaign, run: resolveStage(plan, campaign.run) },
-    });
-  }, [planFromDraft]);
+    if (!campaign?.run) return undefined;
+    return C.planForRun(campaign, campaign.run);
+  }, []);
+
+  const nextStage = useCallback(
+    (tactic: StageTactic = 'steady') => {
+      const { campaign } = stateRef.current;
+      const plan = planFromRun();
+      if (!campaign?.run || !plan || campaign.run.outcome) return;
+      dispatch({
+        type: 'CAMPAIGN',
+        campaign: { ...campaign, run: resolveStage(plan, campaign.run, tactic) },
+      });
+    },
+    [planFromRun],
+  );
+
+  const abort = useCallback(() => {
+    const { campaign } = stateRef.current;
+    const plan = planFromRun();
+    if (!campaign?.run || !plan) return;
+    dispatch({ type: 'CAMPAIGN', campaign: { ...campaign, run: abortRun(plan, campaign.run) } });
+  }, [planFromRun]);
 
   const choose = useCallback(
     (choiceId: string) => {
       const { campaign } = stateRef.current;
-      const plan = planFromDraft();
+      const plan = planFromRun();
       if (!campaign?.run || !plan) return;
       dispatch({
         type: 'CAMPAIGN',
         campaign: { ...campaign, run: chooseEventOption(plan, campaign.run, choiceId) },
       });
     },
-    [planFromDraft],
+    [planFromRun],
   );
 
   const bankHeist = useCallback(() => {
     const { campaign } = stateRef.current;
-    const plan = planFromDraft();
+    const plan = planFromRun();
     if (!campaign?.run?.outcome || !plan) return;
     dispatch({ type: 'CAMPAIGN', campaign: C.completeHeist(campaign, campaign.run, plan) });
     dispatch({ type: 'SCREEN', screen: 'report' });
-  }, [planFromDraft]);
+  }, [planFromRun]);
 
   const value = useMemo<Store>(
     () => ({
@@ -202,10 +228,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       update,
       beginHeist,
       nextStage,
+      abort,
       choose,
       bankHeist,
     }),
-    [state, update, beginHeist, nextStage, choose, bankHeist],
+    [state, update, beginHeist, nextStage, abort, choose, bankHeist],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

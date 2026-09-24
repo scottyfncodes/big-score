@@ -136,6 +136,24 @@ export function calculateCrewSynergy(crew: CrewMember[]): {
     notes.push('One of them checks the exits; one of them does not believe in them.');
   }
 
+  // People who have done this together before are named, not scored. The
+  // campaign curve sits close to its ceiling already (see progression.test),
+  // and a flat bonus for familiarity pushed tier 3 past "an achievement" into
+  // "automatic". Loyalty is where repeat work already pays; this is where the
+  // player sees who they have built.
+  let closest: { a: CrewMember; b: CrewMember; jobs: number } | undefined;
+  for (let i = 0; i < crew.length; i++) {
+    for (let j = i + 1; j < crew.length; j++) {
+      const jobs = Math.min(crew[i].partners?.[crew[j].id] ?? 0, crew[j].partners?.[crew[i].id] ?? 0);
+      if (jobs >= 2 && (!closest || jobs > closest.jobs)) closest = { a: crew[i], b: crew[j], jobs };
+    }
+  }
+  if (closest) {
+    notes.push(
+      `${closest.a.name.split(' ')[0]} and ${closest.b.name.split(' ')[0]} have done ${closest.jobs} jobs together.`,
+    );
+  }
+
   const loyalty = crew.reduce((sum, m) => sum + m.loyalty, 0) / crew.length;
   value += (loyalty - 50) / 10;
   if (loyalty < 35) notes.push('Nobody here owes you anything yet.');

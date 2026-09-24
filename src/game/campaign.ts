@@ -12,6 +12,7 @@ import { generateMarket } from './generation';
 import { generateNewsReport } from './news';
 import { Stream, seedFrom } from './rng';
 import { buyIntel, intelCost, sourceById } from './intel';
+import { memoryFor, partnered, remember } from './memory';
 import type { Plan } from './calc';
 import type {
   ApproachId,
@@ -502,6 +503,29 @@ export function planFor(
   };
 }
 
+/**
+ * The plan a run in progress was started from, rebuilt from the run itself.
+ *
+ * The run records its target, approach, crew and kit, and nothing those
+ * depend on changes while it is in progress — so this is the same plan the
+ * night began with, whether or not the screen that built it still exists. It
+ * is what lets a heist survive a reload.
+ */
+export function planForRun(campaign: Campaign, run: RunState): Plan | undefined {
+  const target = targetById(run.targetId);
+  if (!target) return undefined;
+  const crew = run.crewIds
+    .map((id) => campaign.crew[id]?.member)
+    .filter((m): m is CrewMember => Boolean(m));
+  return {
+    target: targetAsFound(campaign, target),
+    approach: APPROACHES[run.approachId],
+    crew,
+    equipment: ownedEquipment(campaign).filter((e) => run.equipmentIds.includes(e.id)),
+    intel: heldIntel(campaign, run.targetId),
+  };
+}
+
 export function approachesFor(campaign: Campaign, target: Target): ApproachId[] {
   const held = new Set(heldIntel(campaign, target.id).map((i) => i.topicId));
   return target.approaches.filter((id) => {
@@ -517,6 +541,9 @@ export function completeHeist(campaign: Campaign, run: RunState, plan: Plan): Ca
 
   const contacts = { ...campaign.contacts };
   const walkedAway: string[] = [];
+  const crewLines: NonNullable<HeistResult['crew']> = [];
+  // The job is dated the day it was run, not the day the crew got home.
+  const jobDay = campaign.day;
 
   for (const member of plan.crew) {
     const record = crew[member.id];
@@ -526,13 +553,33 @@ export function completeHeist(campaign: Campaign, run: RunState, plan: Plan): Ca
       0,
       Math.min(100, record.member.loyalty + (result.loyaltyDeltas[member.id] ?? 0)),
     );
-    const updated: CrewMember = {
-      ...record.member,
-      loyalty,
-      jobsWithYou: (record.member.jobsWithYou ?? 0) + 1,
-      // Every third job together is worth a level, to a cap of veteran.
-      experience: Math.min(3, record.member.experience + ((record.jobsRun + 1) % 3 === 0 ? 1 : 0)),
-    };
+    const memory = memoryFor(record.member, run, plan.target, jobDay);
+    const updated: CrewMember = remember(
+      {
+        ...record.member,
+        loyalty,
+        jobsWithYou: (record.member.jobsWithYou ?? 0) + 1,
+        // Every third job together is worth a level, to a cap of veteran.
+        experience: Math.min(3, record.member.experience + ((record.jobsRun + 1) % 3 === 0 ? 1 : 0)),
+        partners: partnered(record.member, plan.crew),
+      },
+      memory,
+    );
+    const willStay = record.retained || isRetained(updated);
+    crewLines.push({
+      id: member.id,
+      name: member.name,
+      fate: state?.caught
+        ? 'held'
+        : state?.injured
+          ? 'hurt'
+          : willStay
+            ? 'stayed'
+            : 'walked',
+      loyaltyDelta: result.loyaltyDeltas[member.id] ?? 0,
+      memory: memory.text,
+      memoryTone: memory.tone,
+    });
 
     // Whatever happens, you now know them and they now know you.
     contacts[member.id] = updated;
@@ -582,6 +629,34 @@ export function completeHeist(campaign: Campaign, run: RunState, plan: Plan): Ca
 
   const previous = targetHits(campaign, plan.target.id);
 
+  // Every source you bought from tonight has a longer track record now, and
+  // the ones whose lies the night reached have a worse one.
+  const sourceRecord = { ...(campaign.sourceRecord ?? {}) };
+  for (const held of plan.intel) {
+    const was = sourceRecord[held.sourceId] ?? { sold: 0, lies: 0 };
+    const caught = (run.revealedLies ?? []).some((l) => l.topicId === held.topicId);
+    sourceRecord[held.sourceId] = { sold: was.sold + 1, lies: was.lies + (caught ? 1 : 0) };
+  }
+
+  const exposed = [
+    ...(run.revealedLies ?? []).map((lie) => {
+      const topic = plan.target.topics.find((t) => t.id === lie.topicId);
+      return `${topic?.label ?? 'Intel'} from ${sourceById(lie.sourceId)?.name ?? 'a source'} was a lie.`;
+    }),
+    ...(run.revealedDeadKit ?? []).map(
+      (id) => `The ${plan.equipment.find((e) => e.id === id)?.name ?? 'kit'} failed on the night.`,
+    ),
+  ];
+
+  const banked: HeistResult = {
+    ...result,
+    targetId: plan.target.id,
+    day: jobDay,
+    aborted: result.gross === 0 && run.results.length < 6,
+    crew: crewLines,
+    exposed,
+  };
+
   return {
     ...campaign,
     day,
@@ -589,6 +664,7 @@ export function completeHeist(campaign: Campaign, run: RunState, plan: Plan): Ca
     heat: Math.max(0, Math.min(100, campaign.heat + result.heat - 2 * PASSIVE_DECAY_PER_DAY)),
     score: campaign.score + result.gross,
     intel,
+    sourceRecord,
     hits: {
       ...campaign.hits,
       [plan.target.id]: { count: previous.count + 1, lastDay: day },
@@ -606,8 +682,8 @@ export function completeHeist(campaign: Campaign, run: RunState, plan: Plan): Ca
     ),
     completed: [...campaign.completed, plan.target.id],
     news: [story, ...campaign.news].slice(0, 20),
-    reports: [result, ...campaign.reports].slice(0, 20),
-    lastReport: result,
+    reports: [banked, ...campaign.reports].slice(0, 20),
+    lastReport: banked,
     run: undefined,
   };
 }
@@ -683,7 +759,10 @@ export function bailOut(campaign: Campaign, memberId: string): Campaign {
         ...record,
         condition: 'ready',
         availableOnDay: campaign.day + 1,
-        member: { ...record.member, loyalty: Math.min(100, record.member.loyalty + 15) },
+        member: remember(
+          { ...record.member, loyalty: Math.min(100, record.member.loyalty + 15) },
+          { day: campaign.day, targetId: '', text: 'You posted their bail. They have not forgotten.', tone: 'good' },
+        ),
       },
     },
   };

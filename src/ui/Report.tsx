@@ -1,7 +1,8 @@
 import { gradeLine } from '../game/news';
-import { LOYALTY_RETAIN, nextUnlock } from '../game/campaign';
+import { LOYALTY_RETAIN, heatTier, nextUnlock } from '../game/campaign';
+import { targetById } from '../data/targets';
 import { useStore } from '../state/store';
-import { Hud, Stars, clock, money, shortMoney } from './parts';
+import { Hud, clock, money, shortMoney } from './parts';
 
 export function Report() {
   const { campaign, screen, dispatch } = useStore();
@@ -12,6 +13,27 @@ export function Report() {
   if (!result) return null;
   const grade = gradeLine(result.grade);
   const unlock = nextUnlock(c);
+  const target = result.targetId ? targetById(result.targetId) : undefined;
+  const tier = heatTier(c.heat);
+  const crew =
+    result.crew ??
+    Object.entries(result.loyaltyDeltas).map(([id, delta]) => ({
+      id,
+      name: c.contacts[id]?.name ?? c.crew[id]?.member.name ?? 'Somebody',
+      fate: 'home' as const,
+      loyaltyDelta: delta,
+      memory: '',
+      memoryTone: 'neutral' as const,
+    }));
+  const held = crew.filter((m) => m.fate === 'held').length;
+  const hurt = crew.filter((m) => m.fate === 'hurt').length;
+
+  const summary =
+    result.gross === 0
+      ? `You walked away from ${target?.name ?? 'the job'} with nothing${result.policeContact ? ', just ahead of the police' : ''}.`
+      : `${money(result.gross)} out of ${target?.name ?? 'the job'}. ${
+          held ? `${held === 1 ? 'One' : held} of yours in a cell.` : hurt ? `Everyone home, ${hurt === 1 ? 'one' : hurt} of them hurt.` : 'Everyone home.'
+        }`;
 
   return (
     <>
@@ -23,20 +45,20 @@ export function Report() {
         nav={{ screen, go: (next) => dispatch({ type: 'SCREEN', screen: next }) }}
       />
       <div className="screen">
-        <div className="stack">
+        <div className="stack report">
           <div className={`verdict verdict--${result.grade}`}>
             <div className="verdict__grade">{grade.label}</div>
+            <div className="verdict__summary">{summary}</div>
             <div className="verdict__line">{grade.line}</div>
-            <Stars count={result.stars} />
           </div>
 
           <div className="ledger paper">
-            <div className="ledger__row ledger__row--big">
-              <span>Gross</span>
+            <div className="ledger__row">
+              <span>Taken</span>
               <strong>{money(result.gross)}</strong>
             </div>
             <div className="ledger__row">
-              <span>Crew cut</span>
+              <span>The crew’s cut</span>
               <strong>−{money(result.crewCut)}</strong>
             </div>
             <div className="ledger__row ledger__row--total">
@@ -44,24 +66,56 @@ export function Report() {
               <strong>{money(result.net)}</strong>
             </div>
             <div className="ledger__meta">
-              <Meta label="Time" value={clock(result.durationSeconds)} />
-              <Meta label="Heat" value={`+${result.heat}`} />
-              <Meta label="Complications" value={String(result.complications)} />
-              <Meta label="Injuries" value={String(result.injuries)} />
-              <Meta label="Held" value={String(result.arrests)} />
-              <Meta label="Police" value={result.policeContact ? 'On site' : 'None'} />
+              <Meta label="On site" value={clock(result.durationSeconds)} />
+              <Meta label="Heat" value={`+${result.heat} → ${c.heat}`} />
+              <Meta label="Police" value={result.policeContact ? 'On site' : 'Never came'} />
             </div>
+            <p className="ledger__tier">
+              <strong>{tier.label}.</strong> {tier.line}
+            </p>
           </div>
 
           <div className="panel">
-            <div className="eyebrow" style={{ marginBottom: 6 }}>Notable moment</div>
-            <p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.65, fontStyle: 'italic' }}>
-              {result.notableMoment}
-            </p>
+            <div className="eyebrow" style={{ marginBottom: 8 }}>Your people</div>
+            {crew.map((m) => (
+              <div key={m.id} className="fate">
+                <div className="fate__head">
+                  <span className="fate__name">{m.name}</span>
+                  <span className={`fate__chip fate__chip--${m.fate}`}>{FATE_WORDS[m.fate]}</span>
+                  <span className={`num fate__loyal ${m.loyaltyDelta >= 0 ? 'good' : 'bad'}`}>
+                    {m.loyaltyDelta >= 0 ? '+' : ''}
+                    {m.loyaltyDelta}
+                  </span>
+                </div>
+                {m.memory ? <p className={`fate__memory fate__memory--${m.memoryTone}`}>{m.memory}</p> : null}
+                {m.fate === 'walked' ? (
+                  <p className="fate__note faint">
+                    Took the cut and went home, {c.contacts[m.id]?.loyalty ?? 0}/{LOYALTY_RETAIN} loyalty. Hire them
+                    again and they will remember tonight.
+                  </p>
+                ) : null}
+                {m.fate === 'held' ? (
+                  <p className="fate__note faint">In custody. Bail from the crew room, or leave them there.</p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+
+          <div className="know panel">
+            <div className="eyebrow" style={{ marginBottom: 8 }}>What you know</div>
+            <p className="know__moment">{result.notableMoment}</p>
+            {result.exposed?.length ? (
+              <ul className="know__why">
+                {result.exposed.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            ) : null}
           </div>
 
           {story ? (
             <article className="clipping">
+              <div className="clipping__kicker">What the city thinks</div>
               <div className="clipping__masthead">{story.masthead}</div>
               <h2 className="clipping__headline">{story.headline}</h2>
               <p className="clipping__standfirst">{story.standfirst}</p>
@@ -69,45 +123,11 @@ export function Report() {
             </article>
           ) : null}
 
-          <div className="panel">
-            <div className="eyebrow" style={{ marginBottom: 8 }}>Crew reaction</div>
-            {Object.entries(result.loyaltyDeltas).map(([id, delta]) => {
-              const member = c.crew[id]?.member;
-              if (!member) return null;
-              return (
-                <div key={id} className="reaction">
-                  <span>{member.name}</span>
-                  <span className={`num ${delta >= 0 ? 'good' : 'bad'}`}>
-                    {delta >= 0 ? '+' : ''}
-                    {delta} loyalty
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-
-          {c.walkedAway?.length ? (
-            <div className="panel">
-              <div className="eyebrow" style={{ marginBottom: 8 }}>
-                Went home
-              </div>
-              {c.walkedAway.map((id) => {
-                const member = c.contacts[id];
-                if (!member) return null;
-                return (
-                  <div key={id} className="reaction">
-                    <span>{member.name}</span>
-                    <span className="faint num">
-                      {member.loyalty} / {LOYALTY_RETAIN} loyalty
-                    </span>
-                  </div>
-                );
-              })}
-              <p className="faint" style={{ fontSize: 11.5, margin: '10px 0 0', lineHeight: 1.55 }}>
-                Freelancers take the fee and the cut and go. Hire them again and they will
-                remember tonight — at {LOYALTY_RETAIN} loyalty they stay for good.
-              </p>
-            </div>
+          {target && result.gross > 0 ? (
+            <p className="report__after faint">
+              {target.name} will be worth a fraction of this for weeks, and the next crew through its
+              door will find better locks.
+            </p>
           ) : null}
 
           {unlock ? (
@@ -131,6 +151,14 @@ export function Report() {
     </>
   );
 }
+
+const FATE_WORDS = {
+  home: 'Home',
+  stayed: 'Stays on',
+  walked: 'Went home',
+  hurt: 'Hurt',
+  held: 'Arrested',
+} as const;
 
 function Meta({ label, value }: { label: string; value: string }) {
   return (

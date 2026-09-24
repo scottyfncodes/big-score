@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { heatTier } from '../game/campaign';
 import type { CrewMember, Screen } from '../game/types';
 import { ARCHETYPES } from '../data/crew';
@@ -6,6 +6,40 @@ import { TRAITS } from '../data/traits';
 import { experienceLabel } from '../game/generation';
 
 /** Shared furniture. Nothing in here decides anything; it only shows things. */
+
+/**
+ * Whether the player wants the raw percentages alongside the words. Off by
+ * default: the words carry the decision, and the numbers are there for
+ * anybody who wants to check the arithmetic. A per-device preference, so it
+ * lives in its own key rather than in the campaign save.
+ */
+const NUMBERS_KEY = 'big-score:show-numbers';
+const listeners = new Set<(on: boolean) => void>();
+
+export function useNumbers(): [boolean, (on: boolean) => void] {
+  const [on, setOn] = useState(() => {
+    try {
+      return localStorage.getItem(NUMBERS_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    listeners.add(setOn);
+    return () => {
+      listeners.delete(setOn);
+    };
+  }, []);
+  const set = useCallback((next: boolean) => {
+    try {
+      localStorage.setItem(NUMBERS_KEY, next ? '1' : '0');
+    } catch {
+      // Private mode: the toggle still works for this session.
+    }
+    listeners.forEach((fn) => fn(next));
+  }, []);
+  return [on, set];
+}
 
 export const money = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
 
@@ -28,6 +62,7 @@ export function Hud({
   heat,
   day,
   nav,
+  children,
 }: {
   title: string;
   onBack?: () => void;
@@ -36,6 +71,8 @@ export function Hud({
   day: number;
   /** Screen + navigate, when this screen should show the section bar. */
   nav?: { screen: Screen; go: (screen: Screen) => void };
+  /** Pinned under the title — the heist uses it for the state of the night. */
+  children?: ReactNode;
 }) {
   const tier = heatTier(heat);
   const level = Math.min(4, Math.floor(heat / 21));
@@ -66,6 +103,7 @@ export function Hud({
         </div>
       </div>
       {nav ? <Nav screen={nav.screen} go={nav.go} /> : null}
+      {children ? <div className="hud__extra">{children}</div> : null}
     </header>
   );
 }

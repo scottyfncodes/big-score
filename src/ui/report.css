@@ -155,3 +155,107 @@
 .next {
   border-color: rgba(217, 164, 65, 0.3);
 }
+
+.verdict__summary {
+  font-family: var(--serif);
+  font-size: 19px;
+  line-height: 1.35;
+  color: var(--text);
+  margin: 12px 0 0;
+}
+
+.verdict__line { margin-bottom: 0; }
+
+.ledger__tier {
+  position: relative;
+  z-index: 1;
+  margin: 14px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--paper-faded);
+}
+
+.fate {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.fate:last-child { border-bottom: none; }
+
+.fate__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fate__name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 14.5px;
+}
+
+.fate__chip {
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--board-line);
+  color: var(--text-dim);
+}
+
+.fate__chip--stayed { color: var(--gold); border-color: rgba(217, 164, 65, 0.45); }
+.fate__chip--hurt { color: #e09a4e; border-color: rgba(224, 154, 78, 0.5); }
+.fate__chip--held { color: #fff; background: var(--red); border-color: var(--red); }
+
+.fate__loyal { font-size: 12.5px; min-width: 30px; text-align: right; }
+
+.fate__memory {
+  margin: 5px 0 0;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.fate__memory--bad { color: #e5b3a6; }
+
+.fate__note {
+  margin: 4px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.know__moment {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.55;
+  font-style: italic;
+}
+
+.know__why {
+  margin: 12px 0 0;
+  padding: 10px 0 0 18px;
+  border-top: 1px dashed var(--board-line);
+  font-size: 13px;
+  line-height: 1.6;
+  color: #f0c2b6;
+}
+
+.clipping__kicker {
+  font-size: 9.5px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--paper-faded);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.report__after {
+  margin: 0 4px;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
