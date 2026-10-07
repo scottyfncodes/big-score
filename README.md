@@ -99,6 +99,59 @@ depletion, hardening, custody and openings back as things the city is
 saying, and the aftermath separates what the paper thinks happened from what
 you know.
 
+## The feel layer
+
+The engine decides; this layer makes the player *feel* it decided.
+
+**Every check is a safe dial.** A stage, an event check, a trip back in — each
+resolves on a dial that spins and settles under a fixed pointer. The ring is
+laid out by probability, not margin: the arc each outcome owns is exactly the
+chance of landing it, so the player sees how much of the dial was ever going
+to be good while it turns. A clean roll that still drew trouble lands in the
+green and then gets re-stamped. Tap to stop it.
+
+**The take is the score, and it is always on screen.** The pinned header
+carries the bag — *on the table* until the objective, *in the bag* after —
+and it counts up and down as the night goes, with every gain and loss
+floating off it. It only moves once the dial lands, so the result is heard
+before it is read.
+
+**Rhythm.** Clean stages in a row earn a sliver of the take each (2% per
+stage from the second), shown as six pips; the first slip zeroes it. The
+checks themselves are untouched — rhythm rewards a night going well, it is
+not a reason it does.
+
+**Going back in.** After the objective, before extraction, somebody on the
+crew always says there is more in there. Up to two trips: a harder version of
+the objective (+15, then +27 opposition) for 30% then 48% of the job's value,
+paid out by band, costing minutes that may already be counted. A trip that
+goes wrong trips the alarm, bleeds the take, breaks the rhythm and ends the
+offer. On a prepared tier-1 job it is usually worth it; on a thin crew it is
+usually a disaster. `greed.test.ts` holds that shape.
+
+**The count.** Banking the job is a short sequence — the gross riffled up,
+the crew's cut taken off, yours landing, the grade stamped — followed by any
+record and any new mark. Any tap skips to the end.
+
+**Marks.** Thirteen things a crew gets known for (`marks.ts`), never listed as
+goals: an unearned mark is a rumour in the paper's back pages, and an earned
+one is announced in the middle of the count. Every one is something the
+engine already allowed. Personal records — best night, longest rhythm,
+perfect nights — and a run history live in the Paper tab.
+
+**Sound.** All of it synthesised with WebAudio (`ui/audio.ts`), nothing to
+load. Effects answer the player's hands: dial detents, stamps, a bill counter,
+a register. A small noir trio answers the night: a walking bass and brushes
+while nobody is counting, a piano that starts to worry when the street is
+listening, tempo and strings once somebody is counting, a siren and a pulse
+when the police arrive. One mute button in the header; the preference is
+per-device.
+
+**The first job is guided.** A three-step card on the city (hire, pick a
+job, build the plan) steps aside after the first job, the crew room opens
+on the hiring board when the payroll is empty, and the planning board opens
+on a suggested crew and the kit the job names rather than an empty sheet.
+
 ## Layout
 
 ```
@@ -116,6 +169,7 @@ src/
     scene.ts       each stage staged as a situation; the plan as a theory
     memory.ts      what crew take home from a job
     city.ts        what the city says between jobs
+    marks.ts       what a crew gets known for, and personal records
     sim.ts         headless balance harness
   data/        content as plain objects: targets, crew, equipment,
                approaches, traits, events, narration, districts, scenes

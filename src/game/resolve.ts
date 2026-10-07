@@ -5,12 +5,14 @@ import { Stream } from './rng';
 import { STAGE_PROFILES } from './stages';
 import { sourceById } from './intel';
 import { EQUIPMENT } from '../data/equipment';
+import { GREED_OFFERS, GREED_RESULTS } from '../data/greed';
 import {
   OUTCOME_BANDS,
   SWING,
   calculateComplicationChance,
   crewCutFraction,
   crewScoreFor,
+  pAtLeast,
   stageOpposition,
   stageScore,
   type Plan,
@@ -23,6 +25,7 @@ import type {
   EventResolution,
   GameEvent,
   Grade,
+  GreedResult,
   HeistResult,
   RunLogEntry,
   RunState,
@@ -308,6 +311,7 @@ export function resolveStage(base: Plan, run: RunState, tactic: StageTactic = 's
   };
 
   next = applyStageEffects(next, plan, result, stream);
+  next = applyRhythm(next, outcome);
   next.cursor = stream.cursor;
   next.results = [...run.results, result];
   const found = stageRevelations(base, run, stage);
@@ -609,10 +613,18 @@ export function chooseEventOption(base: Plan, run: RunState, choiceId: string): 
 
   const stream = new Stream(run.seed, run.cursor);
   let passed = true;
+  let check: RunLogEntry['check'];
   if (choice.check) {
     const score = pending.ctx.scoreFor(choice.check.attr);
     const margin = score - choice.check.dc + stream.swing(SWING);
     passed = margin >= 0;
+    check = {
+      attr: choice.check.attr,
+      score: Math.round(score),
+      dc: choice.check.dc,
+      margin: Math.round(margin),
+      passed,
+    };
   }
   const resolution = choice.resolve(pending.ctx, passed);
 
@@ -628,6 +640,7 @@ export function chooseEventOption(base: Plan, run: RunState, choiceId: string): 
       text: resolution.text,
       actorId: run.pending.actorId,
       eventId: run.pending.eventId,
+      ...(check ? { check } : {}),
     },
   ];
 
@@ -785,9 +798,10 @@ export function finishRun(base: Plan, run: RunState, aborted: boolean): RunState
 
   const arrests = Object.values(crewRun).filter((c) => c.caught).length;
   const injuries = Object.values(crewRun).filter((c) => c.injured).length;
-  const complications = run.results.filter(
-    (r) => r.outcome === 'complication' || r.outcome === 'failure',
-  ).length;
+  const greed = run.greed ?? [];
+  const complications =
+    run.results.filter((r) => r.outcome === 'complication' || r.outcome === 'failure').length +
+    greed.filter((g) => g.outcome === 'failure').length;
 
   let gross = aborted
     ? 0
@@ -864,6 +878,10 @@ export function finishRun(base: Plan, run: RunState, aborted: boolean): RunState
     loyaltyDeltas,
     headline: '',
     standfirst: '',
+    bestStreak: run.bestStreak ?? 0,
+    greedTrips: greed.length,
+    greedTake: aborted ? 0 : greed.reduce((sum, g) => sum + g.bonus, 0),
+    greedFailed: greed.filter((g) => g.outcome === 'failure').length,
   };
 
   const story = generateNewsReport({
@@ -916,6 +934,198 @@ function pickNotable(run: RunState): string {
     if (found) return found.text.replace(/^[^:]+: /, '');
   }
   return 'It happened, and then it was over.';
+}
+
+/**
+ * Rhythm.
+ *
+ * A crew that lands stage after stage cleanly is a crew that has stopped
+ * thinking about its hands. Two clean stages in a row and every further one
+ * adds a sliver of the take; the first slip — anything short of success —
+ * drops it to nothing. The checks themselves are untouched: rhythm is a
+ * reward for a night going well, not a reason it does.
+ */
+export const RHYTHM_STEP = 0.02;
+
+function applyRhythm(run: RunState, outcome: StageOutcome): RunState {
+  const clean = outcome === 'success' || outcome === 'critical';
+  const streak = clean ? (run.streak ?? 0) + 1 : 0;
+  const next: RunState = { ...run, streak, bestStreak: Math.max(run.bestStreak ?? 0, streak) };
+  if (streak >= 2) next.takeMul = Math.min(1.6, next.takeMul + RHYTHM_STEP);
+  return next;
+}
+
+/** What the take would be if the van left right now. */
+export function projectedTake(base: Plan, run: RunState): number {
+  if (run.outcome) return run.outcome.gross;
+  let gross = Math.round(base.target.value * base.approach.takeMul * run.takeMul + run.bonusTake);
+  const held = Object.values(run.crewRun).filter((c) => c.caught).length;
+  for (let i = 0; i < held; i++) gross = Math.round(gross * 0.85);
+  return gross;
+}
+
+/** True once the objective has been reached, so the take is real, not hoped for. */
+export function takeInHand(run: RunState): boolean {
+  return run.results.some((r) => r.stage === 'objective');
+}
+
+/**
+ * Going back in.
+ *
+ * Offered once the objective is done and before extraction: a second cage, a
+ * back room, a drawer the file did not list. It is a harder version of the
+ * objective, against a building that has had time to notice, and it costs
+ * minutes that may already be counted. Two trips at most; a trip that goes
+ * wrong ends the offer. Nothing about it is required, and nothing about it
+ * is safe — which is the point. The night's best stories start here.
+ */
+export const GREED_MAX = 2;
+const GREED_SHARE = [0.3, 0.48];
+const GREED_HARDER = [15, 27];
+const GREED_PAY: Record<StageOutcome, number> = {
+  critical: 1.4,
+  success: 1,
+  partial: 0.5,
+  complication: 0.25,
+  failure: 0,
+};
+
+export interface GreedOffer {
+  attempt: number;
+  text: string;
+  attr: Attribute;
+  actorId?: string;
+  score: number;
+  opposition: number;
+  /** Chance of at least a partial — the same read the stage calls use. */
+  chance: number;
+  /** Chance of landing it cleanly. */
+  clean: number;
+  /** Headline of what a clean trip adds. */
+  prize: number;
+  /** Rough minutes the trip will take. */
+  minutes: number;
+}
+
+export function greedOffer(base: Plan, run: RunState): GreedOffer | undefined {
+  if (run.outcome || run.pending || run.greedDeclined) return undefined;
+  if (STAGE_ORDER[run.stageIndex] !== 'extraction') return undefined;
+  const objective = run.results.find((r) => r.stage === 'objective');
+  if (!objective || objective.outcome === 'failure') return undefined;
+  const trips = run.greed ?? [];
+  if (trips.length >= GREED_MAX) return undefined;
+  if (trips.some((g) => g.outcome === 'failure')) return undefined;
+
+  const attempt = trips.length;
+  const plan = livePlan(base, run);
+  const { score, actorId, attr } = stageScore(plan, 'objective');
+  const opposition = stageOpposition(plan, 'objective', false) + GREED_HARDER[attempt];
+  const lead = plan.crew.find((m) => m.id === actorId);
+  if (!lead) return undefined;
+  const lines = GREED_OFFERS[base.target.id] ?? GREED_OFFERS._default;
+  const who = lead.name.split(' ')[0];
+  const time = greedTime(base, run, 'success');
+  return {
+    attempt,
+    text: lines[attempt].split('{who}').join(who),
+    attr,
+    actorId,
+    score: Math.round(score),
+    opposition: Math.round(opposition),
+    chance: Math.max(1, Math.min(99, Math.round(pAtLeast(score - opposition - OUTCOME_BANDS.partial) * 100))),
+    clean: Math.max(1, Math.min(99, Math.round(pAtLeast(score - opposition - OUTCOME_BANDS.success) * 100))),
+    prize: Math.round(base.target.value * GREED_SHARE[attempt]),
+    minutes: Math.max(1, Math.round(time / 60)),
+  };
+}
+
+function greedTime(base: Plan, run: RunState, outcome: StageOutcome): number {
+  return Math.round(
+    STAGE_PROFILES.objective.baseTime * 0.55 * base.approach.timeMul * kitMul(base, run, 'timeMul') * OUTCOME_TIME[outcome],
+  );
+}
+
+export function goBackIn(base: Plan, run: RunState): RunState {
+  const offer = greedOffer(base, run);
+  if (!offer) return run;
+  const stream = new Stream(run.seed, run.cursor);
+  const plan = livePlan(base, run);
+  const roll = stream.swing(SWING);
+  const margin = Math.round(offer.score - offer.opposition + roll);
+  const outcome = bandFor(margin);
+
+  const bonus = Math.round(offer.prize * GREED_PAY[outcome]);
+  const timeSpent = greedTime(base, run, outcome);
+  const noiseAdded = Math.round(
+    STAGE_PROFILES.objective.baseNoise *
+      1.3 *
+      plan.approach.noiseMul *
+      kitMul(plan, run, 'noiseMul') *
+      OUTCOME_NOISE[outcome] +
+      (outcome === 'complication' ? 10 : 0),
+  );
+
+  const lead = plan.crew.find((m) => m.id === offer.actorId);
+  const who = lead?.name.split(' ')[0] ?? 'The crew';
+  const text = stream.pick(GREED_RESULTS[outcome]).split('{who}').join(who);
+
+  const trip: GreedResult = {
+    attempt: offer.attempt,
+    outcome,
+    attr: offer.attr,
+    score: offer.score,
+    opposition: offer.opposition,
+    margin,
+    actorId: offer.actorId,
+    bonus,
+    timeSpent,
+    noiseAdded,
+  };
+
+  let next: RunState = {
+    ...run,
+    clock: run.clock + timeSpent,
+    noise: Math.max(0, Math.min(100, run.noise + noiseAdded)),
+    bonusTake: run.bonusTake + bonus,
+    crewRun: { ...run.crewRun },
+    greed: [...(run.greed ?? []), trip],
+  };
+
+  const actor = offer.actorId ? next.crewRun[offer.actorId] : undefined;
+  if (actor) {
+    const delta = outcome === 'critical' ? 6 : outcome === 'failure' ? -15 : outcome === 'complication' ? -8 : 0;
+    next.crewRun[actor.id] = {
+      ...actor,
+      composure: Math.max(0, Math.min(100, actor.composure + delta)),
+      injured: actor.injured || (outcome === 'failure' && stream.bool(0.3)),
+      notes: outcome === 'failure' ? [...actor.notes, 'Went back for more, and found the alarm instead.'] : actor.notes,
+    };
+  }
+  if (outcome === 'failure') {
+    next.alarm = true;
+    next.takeMul = Math.max(0.05, next.takeMul - 0.08);
+    next.streak = 0;
+  }
+
+  next.cursor = stream.cursor;
+  next.log = [
+    ...run.log,
+    {
+      kind: 'greed',
+      stage: 'objective',
+      tone: TONE[outcome],
+      text,
+      actorId: offer.actorId,
+      outcome,
+    },
+  ];
+  return checkExposure(next, 'extraction');
+}
+
+/** Leaving it. The offer does not come back tonight. */
+export function declineGreed(run: RunState): RunState {
+  if (run.outcome || run.greedDeclined) return run;
+  return { ...run, greedDeclined: true };
 }
 
 /** Convenience for tests and the simulator: run a whole heist with a policy. */

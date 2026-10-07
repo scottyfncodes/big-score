@@ -40,14 +40,17 @@ const ATTR_NAMES: Record<Attribute, string> = {
 export function CrewRoom() {
   const { campaign, screen, dispatch, update } = useStore();
   const c = campaign!;
-  const [tab, setTab] = useState<Tab>(screen === 'kit' ? 'kit' : 'roster');
+  // With nobody on the payroll there is nothing to look at but the board.
+  const emptyRoster = Object.keys(c.crew).length === 0;
+  const [tab, setTab] = useState<Tab>(screen === 'kit' ? 'kit' : emptyRoster ? 'market' : 'roster');
   const [inspect, setInspect] = useState<string | undefined>();
 
   // Crew and Equipment are two entries in the nav but one component, so the
   // tab has to follow the screen — without this, pressing Equipment while
   // already in the crew room does nothing at all.
   useEffect(() => {
-    setTab(screen === 'kit' ? 'kit' : 'roster');
+    setTab(screen === 'kit' ? 'kit' : emptyRoster ? 'market' : 'roster');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen]);
 
   const records = crewRecords(c);

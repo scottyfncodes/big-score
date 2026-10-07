@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { useStore } from './state/store';
+import { setMusic } from './ui/audio';
 import { CityMap } from './ui/CityMap';
 import { CrewRoom } from './ui/CrewRoom';
 import { Execution } from './ui/Execution';
@@ -12,6 +14,13 @@ import { Title } from './ui/Title';
 export function App() {
   const { screen, campaign } = useStore();
 
+  // The night drives its own music; everywhere else the band plays quietly.
+  useEffect(() => {
+    if (screen !== 'execute') setMusic('city');
+    // Each screen starts at its top; the window scroll would otherwise carry over.
+    window.scrollTo(0, 0);
+  }, [screen]);
+
   if (!campaign || screen === 'title') {
     return (
       <div className="app">
@@ -21,7 +30,7 @@ export function App() {
   }
 
   return (
-    <div className="app">
+    <div className="app" key={screen}>
       {screen === 'city' ? <CityMap /> : null}
       {screen === 'target' ? <TargetBoard /> : null}
       {screen === 'crew' || screen === 'kit' ? <CrewRoom /> : null}

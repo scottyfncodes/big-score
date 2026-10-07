@@ -10,7 +10,7 @@ import {
 } from 'react';
 import * as C from '../game/campaign';
 import { seedFrom } from '../game/rng';
-import { abortRun, chooseEventOption, resolveStage, startRun } from '../game/resolve';
+import { abortRun, chooseEventOption, goBackIn, resolveStage, startRun } from '../game/resolve';
 import type { ApproachId, Campaign, Screen, StageTactic } from '../game/types';
 import { clearCampaign, hasSave, loadCampaign, saveCampaign } from './persistence';
 
@@ -129,6 +129,7 @@ interface Store extends State {
   nextStage: (tactic?: StageTactic) => void;
   abort: () => void;
   choose: (choiceId: string) => void;
+  goBack: () => void;
   bankHeist: () => void;
 }
 
@@ -212,6 +213,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [planFromRun],
   );
 
+  const goBack = useCallback(() => {
+    const { campaign } = stateRef.current;
+    const plan = planFromRun();
+    if (!campaign?.run || !plan) return;
+    dispatch({ type: 'CAMPAIGN', campaign: { ...campaign, run: goBackIn(plan, campaign.run) } });
+  }, [planFromRun]);
+
   const bankHeist = useCallback(() => {
     const { campaign } = stateRef.current;
     const plan = planFromRun();
@@ -230,9 +238,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       nextStage,
       abort,
       choose,
+      goBack,
       bankHeist,
     }),
-    [state, update, beginHeist, nextStage, abort, choose, bankHeist],
+    [state, update, beginHeist, nextStage, abort, choose, goBack, bankHeist],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

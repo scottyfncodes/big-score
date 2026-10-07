@@ -386,7 +386,7 @@ export interface EventContext {
 }
 
 export interface RunLogEntry {
-  kind: 'stage' | 'event' | 'note' | 'reveal';
+  kind: 'stage' | 'event' | 'note' | 'reveal' | 'greed';
   stage: StageId;
   text: string;
   tone: 'good' | 'bad' | 'neutral' | 'great' | 'awful';
@@ -395,6 +395,30 @@ export interface RunLogEntry {
   /** Set on event resolutions, so the aftermath can name the situation. */
   eventId?: string;
   outcome?: StageOutcome;
+  /**
+   * The roll behind an event choice that rested on a check, so the night can
+   * show the player the dial it was decided on rather than only the verdict.
+   */
+  check?: { attr: Attribute; score: number; dc: number; margin: number; passed: boolean };
+}
+
+/**
+ * One trip back in after the objective is done. The bags are already full;
+ * this is the second cage, the back room, the drawer nobody listed — and every
+ * minute it takes is a minute somebody outside might be counting.
+ */
+export interface GreedResult {
+  attempt: number;
+  outcome: StageOutcome;
+  attr: Attribute;
+  score: number;
+  opposition: number;
+  margin: number;
+  actorId?: string;
+  /** What it added to the take, before anything else went wrong. */
+  bonus: number;
+  timeSpent: number;
+  noiseAdded: number;
 }
 
 export interface PendingEvent {
@@ -449,6 +473,16 @@ export interface RunState {
    */
   revealedLies?: { topicId: string; sourceId: string; stage: StageId }[];
   revealedDeadKit?: string[];
+  /**
+   * Stages landed cleanly in a row. A crew in rhythm earns a little more of
+   * the take on every stage it keeps it, and loses all of it on the first slip.
+   */
+  streak?: number;
+  bestStreak?: number;
+  /** Trips back in for more after the objective. At most two a night. */
+  greed?: GreedResult[];
+  /** Set once the player declines going back in, so the offer stops. */
+  greedDeclined?: boolean;
   /** Set once the run is over, however it ended. */
   outcome?: HeistResult;
 }
@@ -486,6 +520,15 @@ export interface HeistResult {
   }[];
   /** Lies and dead kit the night exposed — the answers to "why". */
   exposed?: string[];
+  /** Longest run of clean stages, and what going back in was worth. */
+  bestStreak?: number;
+  greedTake?: number;
+  greedTrips?: number;
+  greedFailed?: number;
+  /** Marks first earned on this job, by id. */
+  marks?: string[];
+  /** Set when this night beat every earlier one on the campaign. */
+  record?: boolean;
 }
 
 export interface NewsStory {
@@ -550,4 +593,16 @@ export interface Campaign {
   handle: string;
   run?: RunState;
   lastReport?: HeistResult;
+  /** Marks earned this campaign, by id, with the day each was first earned. */
+  marks?: Record<string, number>;
+  /** Personal bests, for the count to measure a night against. */
+  records?: CampaignRecords;
+}
+
+export interface CampaignRecords {
+  bestNet: number;
+  bestGross: number;
+  bestStreak: number;
+  perfectNights: number;
+  jobs: number;
 }

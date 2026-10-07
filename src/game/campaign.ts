@@ -1,4 +1,5 @@
 import { DISTRICTS } from '../data/districts';
+import { scoreNight } from './marks';
 import {
   EQUIPMENT,
   MAX_EQUIPMENT_LEVEL,
@@ -13,7 +14,7 @@ import { generateNewsReport } from './news';
 import { Stream, seedFrom } from './rng';
 import { buyIntel, intelCost, sourceById } from './intel';
 import { memoryFor, partnered, remember } from './memory';
-import type { Plan } from './calc';
+import { CREW_SOFT_MAX, analysePlan, crewCutFraction, type Plan } from './calc';
 import type {
   ApproachId,
   Attribute,
@@ -651,6 +652,9 @@ export function completeHeist(campaign: Campaign, run: RunState, plan: Plan): Ca
     crew: crewLines,
     exposed,
   };
+  const legend = scoreNight(campaign, { result: banked, run, plan });
+  banked.marks = legend.fresh;
+  banked.record = legend.record;
 
   return {
     ...campaign,
@@ -679,6 +683,8 @@ export function completeHeist(campaign: Campaign, run: RunState, plan: Plan): Ca
     news: [story, ...campaign.news].slice(0, 20),
     reports: [banked, ...campaign.reports].slice(0, 20),
     lastReport: banked,
+    marks: legend.marks,
+    records: legend.records,
     run: undefined,
   };
 }
@@ -774,4 +780,51 @@ export function bailOut(campaign: Campaign, memberId: string): Campaign {
       },
     },
   };
+}
+
+/**
+ * A first draft of who should be in the room, for a player who has not
+ * picked anyone yet. Greedy: add whoever makes the plan safest, stop when
+ * nobody does. It is a suggestion the planning board opens with, never a
+ * decision — every name on it can be changed.
+ */
+export function suggestCrew(campaign: Campaign, targetId: string, approachId: ApproachId): string[] {
+  const roster = activeCrew(campaign);
+  const picked: string[] = [];
+  const value = (ids: string[]) => {
+    const plan = planFor(campaign, targetId, approachId, ids, []);
+    if (!plan || ids.length < 2) return ids.length * 0.01;
+    const a = analysePlan(plan);
+    return a.getawayChance + a.successChance * 0.6 - crewCutFraction(plan.crew) * 40;
+  };
+  let best = value(picked);
+  while (picked.length < CREW_SOFT_MAX) {
+    let choice: string | undefined;
+    let score = best;
+    for (const m of roster) {
+      if (picked.includes(m.id)) continue;
+      const v = value([...picked, m.id]);
+      if (v > score || (picked.length < 2 && choice === undefined)) {
+        score = v;
+        choice = m.id;
+      }
+    }
+    if (!choice) break;
+    picked.push(choice);
+    best = score;
+  }
+  return picked;
+}
+
+/** The owned kit this job asks for, one item per thing it needs. */
+export function suggestKit(campaign: Campaign, targetId: string): string[] {
+  const target = targetById(targetId);
+  if (!target) return [];
+  const owned = ownedEquipment(campaign);
+  const ids = new Set<string>();
+  for (const need of target.needs) {
+    const item = owned.find((e) => e.tag === need.tag);
+    if (item) ids.add(item.id);
+  }
+  return [...ids];
 }

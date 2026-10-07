@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { DISTRICTS, districtById } from '../data/districts';
 import {
+  activeCrew,
   availableTargets,
   destroyEvidence,
   EVIDENCE_COST,
@@ -55,17 +56,7 @@ export function CityMap() {
             <p className="city-heat__line dim">{tier.line}</p>
           </div>
 
-          {c.reports.length === 0 && Object.keys(c.crew).length === 0 ? (
-            <div className="howto panel">
-              <div className="eyebrow">How this works</div>
-              <ol>
-                <li><strong>Hire a crew</strong> in the Crew tab. Two at least; four is usually right.</li>
-                <li><strong>Pick a job</strong> below. Read the dossier, buy what you can afford to know.</li>
-                <li><strong>Build the plan</strong> — who is in the room, what they carry.</li>
-                <li><strong>Run the night</strong> one stage at a time. You make the calls.</li>
-              </ol>
-            </div>
-          ) : null}
+          <NextMove campaign={c} targets={targets} />
 
           {wire.length ? (
             <div className="wire">
@@ -248,5 +239,53 @@ function TargetTile({
         <span className="tile__district">{districtById(target.districtId)?.name}</span>
       </div>
     </button>
+  );
+}
+
+/**
+ * The one thing to do next, while the player is still learning what the
+ * things are. It steps aside after the first job: by then the city is
+ * theirs to read.
+ */
+function NextMove({ campaign, targets }: { campaign: Campaign; targets: Target[] }) {
+  const { dispatch } = useStore();
+  if (campaign.reports.length > 0 || campaign.run) return null;
+  const crew = activeCrew(campaign).length;
+  const soft = [...targets].sort((a, b) => a.tier - b.tier || a.value - b.value)[0];
+  const step =
+    crew < 2
+      ? {
+          n: 1,
+          title: crew === 0 ? 'Hire a crew' : 'One more body',
+          line:
+            crew === 0
+              ? 'Two people at least. Somebody quiet and somebody who can open a safe is a start; four is usually right.'
+              : 'Nobody does this alone. Hire at least one more.',
+          cta: 'To the crew board',
+          go: () => dispatch({ type: 'SCREEN', screen: 'crew' }),
+        }
+      : {
+          n: 2,
+          title: 'Pick a job',
+          line: soft
+            ? `${soft.name} is the soft one. Read the file, choose how you go in, then build the plan.`
+            : 'Read a file, choose how you go in, then build the plan.',
+          cta: soft ? `Open ${soft.name}` : 'Choose a job below',
+          go: () => soft && dispatch({ type: 'SELECT_TARGET', targetId: soft.id }),
+        };
+  return (
+    <div className="nextmove">
+      <div className="nextmove__steps" aria-hidden="true">
+        {[1, 2, 3].map((i) => (
+          <span key={i} className={i < step.n ? 'done' : i === step.n ? 'now' : ''} />
+        ))}
+      </div>
+      <div className="eyebrow">Your first job · step {step.n} of 3</div>
+      <div className="nextmove__title">{step.title}</div>
+      <p className="nextmove__line">{step.line}</p>
+      <button className="btn btn--primary btn--wide" onClick={step.go}>
+        {step.cta}
+      </button>
+    </div>
   );
 }

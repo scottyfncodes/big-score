@@ -3,14 +3,19 @@ import { LOYALTY_RETAIN, heatTier, nextUnlock } from '../game/campaign';
 import { targetById } from '../data/targets';
 import { useStore } from '../state/store';
 import { Hud, money, shortMoney } from './parts';
+import { useState } from 'react';
+import { Count } from './Count';
+import { MARKS } from '../game/marks';
 
 export function Report() {
   const { campaign, screen, dispatch } = useStore();
   const c = campaign!;
   const result = c.lastReport;
   const story = c.news[0];
+  const [counting, setCounting] = useState(true);
 
   if (!result) return null;
+  const best = Math.max(0, ...c.reports.slice(1).map((r) => r.net));
   const grade = gradeLine(result.grade, result);
   const unlock = nextUnlock(c);
   const target = result.targetId ? targetById(result.targetId) : undefined;
@@ -44,6 +49,9 @@ export function Report() {
         day={c.day}
         nav={{ screen, go: (next) => dispatch({ type: 'SCREEN', screen: next }) }}
       />
+      {counting ? (
+        <Count result={result} targetName={targetById(result.targetId ?? '')?.name ?? 'the job'} best={best} onDone={() => setCounting(false)} />
+      ) : null}
       <div className="screen">
         <div className="stack report">
           <div className={`verdict verdict--${result.grade}`}>
@@ -185,6 +193,7 @@ export function NewsRoom() {
       />
       <div className="screen">
         <div className="stack">
+          <Legend />
           {c.news.length === 0 ? (
             <div className="panel faint">
               Nothing you have done has been worth printing yet.
@@ -200,6 +209,71 @@ export function NewsRoom() {
                 <p className="clipping__body">{story.body}</p>
               </article>
             ))
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** What the city knows about you: your best nights, and what you are known for. */
+function Legend() {
+  const { campaign } = useStore();
+  const c = campaign!;
+  const records = c.records;
+  const earned = c.marks ?? {};
+  const count = Object.keys(earned).length;
+  return (
+    <>
+      {records && records.jobs > 0 ? (
+        <div className="panel">
+          <div className="eyebrow">Your record · {records.jobs} job{records.jobs === 1 ? '' : 's'}</div>
+          <div className="legend__records">
+            <div>
+              <span className="eyebrow">Best night</span>
+              <strong className="money">{money(records.bestNet)}</strong>
+            </div>
+            <div>
+              <span className="eyebrow">Moved, lifetime</span>
+              <strong className="money">{shortMoney(c.score)}</strong>
+            </div>
+            <div>
+              <span className="eyebrow">Longest rhythm</span>
+              <strong>{records.bestStreak}</strong>
+            </div>
+            <div>
+              <span className="eyebrow">Perfect nights</span>
+              <strong>{records.perfectNights}</strong>
+            </div>
+          </div>
+          {c.reports.length ? (
+            <div className="history">
+              {c.reports.slice(0, 8).map((r, i) => (
+                <div key={`${r.day}-${i}`} className="history__row">
+                  <span>{targetById(r.targetId ?? '')?.name ?? 'A job'} <span className="faint">· day {r.day}</span></span>
+                  <span className={`history__grade history__grade--${r.grade}`}>{r.gross === 0 ? 'off' : r.grade}</span>
+                  <span className="money">{shortMoney(r.net)}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      <div className="panel">
+        <div className="eyebrow">What they say about you · {count} of {MARKS.length}</div>
+        <div className="marks">
+          {MARKS.map((m) =>
+            earned[m.id] ? (
+              <div key={m.id} className="markcard markcard--on">
+                <strong>{m.name}</strong>
+                <span>{m.line}</span>
+              </div>
+            ) : (
+              <div key={m.id} className="markcard markcard--off">
+                <strong>· · ·</strong>
+                <span>“{m.rumour}”</span>
+              </div>
+            ),
           )}
         </div>
       </div>

@@ -242,3 +242,20 @@
 @media (max-width: 719px) {
   .map__svg { max-height: 250px; }
 }
+
+.nextmove {
+  position: relative;
+  padding: 16px 16px 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(200, 69, 47, 0.45);
+  background: linear-gradient(160deg, rgba(200, 69, 47, 0.12), rgba(200, 69, 47, 0.02) 60%), var(--ink-2);
+  animation: rise 0.35s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+.nextmove__steps { display: flex; gap: 4px; margin-bottom: 10px; }
+.nextmove__steps span { flex: 1; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); }
+.nextmove__steps .done { background: var(--green); }
+.nextmove__steps .now { background: var(--red); animation: pulse 1.6s ease-in-out infinite; }
+
+.nextmove__title { font-family: var(--serif); font-size: 26px; margin: 4px 0 6px; color: var(--paper); }
+.nextmove__line { margin: 0 0 14px; font-size: 14px; line-height: 1.55; color: var(--text-dim); }
