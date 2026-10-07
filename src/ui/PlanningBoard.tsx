@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { STAGE_PROFILES } from '../game/stages';
 import { TAG_LABELS } from '../data/equipment';
 import { ARCHETYPES } from '../data/crew';
 import { CREW_SOFT_MAX, analysePlan, stageOdds } from '../game/calc';
-import { activeCrew, heatTier, ownedEquipment, planFor } from '../game/campaign';
+import { activeCrew, heatTier, ownedEquipment, planFor, suggestCrew, suggestKit } from '../game/campaign';
 import { shownConfidence, sourceById } from '../game/intel';
 import { READ_WORDS, planTheory, readFor } from '../game/scene';
 import { useStore } from '../state/store';
@@ -28,6 +28,25 @@ export function PlanningBoard() {
 
   const roster = activeCrew(c);
   const kit = ownedEquipment(c);
+
+  // Open on a sensible first draft rather than an empty board: the best crew
+  // available and the kit this job names. Only when nothing is picked yet —
+  // a draft the player built is never overwritten.
+  useEffect(() => {
+    if (!draft.targetId || !draft.approachId) return;
+    const available = new Set(roster.map((m) => m.id));
+    const crewIds = draft.crewIds.filter((id) => available.has(id));
+    const owned = new Set(kit.map((e) => e.id));
+    const equipmentIds = draft.equipmentIds.filter((id) => owned.has(id));
+    dispatch({
+      type: 'DRAFT',
+      draft: {
+        crewIds: crewIds.length ? crewIds : suggestCrew(c, draft.targetId, draft.approachId),
+        equipmentIds: equipmentIds.length ? equipmentIds : suggestKit(c, draft.targetId),
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const plan = useMemo(
     () =>

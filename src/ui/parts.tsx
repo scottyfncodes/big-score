@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { onSoundChange, setSound, soundOn } from './audio';
 import { heatTier } from '../game/campaign';
 import type { CrewMember, Screen } from '../game/types';
 import { ARCHETYPES } from '../data/crew';
@@ -86,6 +87,7 @@ export function Hud({
           </button>
         ) : null}
         <div className="hud__title">{title}</div>
+        <SoundToggle />
         <div className="hud__stats">
           <div className="stat">
             <span className="stat__label">Day</span>
@@ -296,4 +298,82 @@ export function CrewCard({
 
 export function Empty({ children }: { children: ReactNode }) {
   return <div className="panel" style={{ textAlign: 'center', color: 'var(--text-dim)' }}>{children}</div>;
+}
+
+/** The speaker in the corner. One tap, every sound in the game. */
+export function SoundToggle() {
+  const [on, setOn] = useState(soundOn);
+  useEffect(() => onSoundChange(setOn), []);
+  return (
+    <button
+      className={`sound${on ? '' : ' sound--off'}`}
+      onClick={() => setSound(!on)}
+      aria-label={on ? 'Mute sound' : 'Turn sound on'}
+      aria-pressed={on}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor" />
+        {on ? (
+          <path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        ) : (
+          <path d="M16.5 9.5l5 5m0-5l-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+        )}
+      </svg>
+    </button>
+  );
+}
+
+/**
+ * A number that travels rather than jumps. Money in this game should look
+ * like it is being counted, and losses like they are being taken away.
+ */
+export function useTween(target: number, duration = 700): number {
+  const [shown, setShown] = useState(target);
+  const from = useRef(target);
+  const raf = useRef(0);
+  useEffect(() => {
+    const start = performance.now();
+    const origin = from.current;
+    if (origin === target) return;
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      const e = 1 - (1 - t) ** 3;
+      const v = origin + (target - origin) * e;
+      from.current = v;
+      setShown(v);
+      if (t < 1) raf.current = requestAnimationFrame(step);
+    };
+    raf.current = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf.current);
+  }, [target, duration]);
+  return shown;
+}
+
+/** Money that counts, with the change floating off it. */
+export function LiveMoney({ value, className }: { value: number; className?: string }) {
+  const shown = useTween(value, 900);
+  const [deltas, setDeltas] = useState<{ id: number; amount: number }[]>([]);
+  const prev = useRef(value);
+  const seq = useRef(0);
+  const timers = useRef<number[]>([]);
+  useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
+  useEffect(() => {
+    const d = Math.round(value - prev.current);
+    prev.current = value;
+    if (Math.abs(d) < 1) return;
+    const id = ++seq.current;
+    setDeltas((list) => [...list.slice(-2), { id, amount: d }]);
+    timers.current.push(window.setTimeout(() => setDeltas((list) => list.filter((x) => x.id !== id)), 1600));
+  }, [value]);
+  return (
+    <span className={`livemoney ${className ?? ''}`}>
+      <span className="livemoney__n num">{money(shown)}</span>
+      {deltas.map((d) => (
+        <span key={d.id} className={`livemoney__d livemoney__d--${d.amount > 0 ? 'up' : 'down'}`}>
+          {d.amount > 0 ? '+' : '−'}
+          {shortMoney(Math.abs(d.amount))}
+        </span>
+      ))}
+    </span>
+  );
 }

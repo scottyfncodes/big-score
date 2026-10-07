@@ -98,3 +98,70 @@
   font-size: 11px;
   line-height: 1.6;
 }
+
+.title__frame { position: relative; }
+
+.title__dial {
+  position: absolute;
+  left: 50%;
+  top: -10px;
+  width: min(92vw, 420px);
+  transform: translateX(-50%);
+  opacity: 0.22;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.title__dial-ring {
+  transform-origin: 50px 50px;
+  animation: title-spin 1.4s cubic-bezier(0.15, 0.85, 0.25, 1) both;
+}
+
+@keyframes title-spin {
+  from { transform: rotate(-400deg); }
+  to { transform: rotate(0deg); }
+}
+
+.title__frame > *:not(.title__dial) { position: relative; z-index: 1; }
+
+.title__the { animation: reveal-up 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) 0.2s both; }
+
+.title__score {
+  animation: title-stamp 0.42s cubic-bezier(0.2, 1.5, 0.4, 1) 1.15s both;
+  text-shadow: 0 0 40px rgba(200, 69, 47, 0.35);
+}
+
+@keyframes title-stamp {
+  0% { opacity: 0; transform: scale(2.4) rotate(-4deg); }
+  65% { opacity: 1; transform: scale(0.95) rotate(-2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(-2deg); }
+}
+
+.title__eyebrow,
+.title__blurb,
+.title__actions,
+.title__foot { animation: reveal-up 0.8s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+.title__eyebrow { animation-delay: 0.05s; }
+.title__blurb { animation-delay: 1.5s; }
+.title__actions { animation-delay: 1.7s; }
+.title__foot { animation-delay: 1.9s; }
+
+.title__continue {
+  flex-direction: column;
+  gap: 2px;
+  min-height: 60px;
+}
+
+.title__save {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  font-weight: 500;
+  opacity: 0.75;
+}
+
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
