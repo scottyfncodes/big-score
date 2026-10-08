@@ -65,6 +65,7 @@ export function Hud({
   day,
   nav,
   children,
+  onTitle,
 }: {
   title: string;
   onBack?: () => void;
@@ -75,6 +76,8 @@ export function Hud({
   nav?: { screen: Screen; go: (screen: Screen) => void };
   /** Pinned under the title — the heist uses it for the state of the night. */
   children?: ReactNode;
+  /** When the title itself is something the player can change (their name). */
+  onTitle?: () => void;
 }) {
   const tier = heatTier(heat);
   const level = Math.min(4, Math.floor(heat / 21));
@@ -86,7 +89,16 @@ export function Hud({
             ‹
           </button>
         ) : null}
-        <div className="hud__title">{title}</div>
+        {onTitle ? (
+          <button className="hud__title hud__title--btn" onClick={onTitle} aria-label={`${title} — rename`}>
+            <span className="hud__title-text">{title}</span>
+            <svg className="hud__edit" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M11.5 2.5l2 2L6 12l-2.8.8L4 10z" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+            </svg>
+          </button>
+        ) : (
+          <div className="hud__title">{title}</div>
+        )}
         <SoundToggle />
         <div className="hud__stats">
           <div className="stat">

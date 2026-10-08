@@ -50,6 +50,16 @@ export function heatTier(heat: number) {
   return HEAT_TIERS.find((t) => heat >= t.min && heat <= t.max) ?? HEAT_TIERS[0];
 }
 
+/** What the crew calls the player until the player says otherwise. */
+export const DEFAULT_HANDLE = 'The Architect';
+export const HANDLE_MAX = 18;
+
+/** A new name for the player. Blank falls back to the default rather than to nothing. */
+export function rename(campaign: Campaign, handle: string): Campaign {
+  const trimmed = handle.trim().slice(0, HANDLE_MAX);
+  return { ...campaign, handle: trimmed || DEFAULT_HANDLE };
+}
+
 export function newCampaign(seed: number, handle: string): Campaign {
   return {
     version: SAVE_VERSION,

@@ -10,7 +10,10 @@ import {
   hireCost,
   lieLow,
   newCampaign,
+  DEFAULT_HANDLE,
+  HANDLE_MAX,
   PASSIVE_DECAY_PER_DAY,
+  rename,
   planFor,
   purchaseIntel,
   scout,
@@ -122,6 +125,19 @@ describe('campaign', () => {
     const b = playOut(plan, 77, policy as never);
     expect(a.outcome).toEqual(b.outcome);
     expect(a.log).toEqual(b.log);
+  });
+});
+
+describe('the name on the paper', () => {
+  it('a new campaign does not ask for one, and the player can change it later', () => {
+    const c = newCampaign(seedFrom('name-test'), DEFAULT_HANDLE);
+    expect(c.handle).toBe(DEFAULT_HANDLE);
+    expect(rename(c, '  Mother Goose ').handle).toBe('Mother Goose');
+    expect(rename(c, 'x'.repeat(40)).handle).toHaveLength(HANDLE_MAX);
+    // Blank is not a name; it is a way back to the default.
+    expect(rename(rename(c, 'Vee'), '   ').handle).toBe(DEFAULT_HANDLE);
+    // Everything else about the campaign is untouched.
+    expect({ ...rename(c, 'Vee'), handle: c.handle }).toEqual(c);
   });
 });
 
