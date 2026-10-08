@@ -9,8 +9,10 @@ import {
   lieLow,
   lieLowRelief,
   EVIDENCE_HEAT,
+  HANDLE_MAX,
   LIE_LOW_DAYS,
   nextUnlock,
+  rename,
   targetValueMultiplier,
   unlockedDistricts,
 } from '../game/campaign';
@@ -24,6 +26,8 @@ export function CityMap() {
   const c = campaign!;
   const [openDistrict, setOpenDistrict] = useState<string | undefined>();
   const [menu, setMenu] = useState(false);
+  // The name sheet, holding what is typed until it is kept; undefined while closed.
+  const [naming, setNaming] = useState<string | undefined>();
 
   const open = useMemo(() => new Set(unlockedDistricts(c).map((d) => d.id)), [c]);
   const targets = useMemo(() => availableTargets(c), [c]);
@@ -37,11 +41,12 @@ export function CityMap() {
   return (
     <>
       <Hud
-        title={`Port Argent · ${c.handle}`}
+        title={`${c.handle} · Port Argent`}
         bankroll={c.bankroll}
         heat={c.heat}
         day={c.day}
         nav={{ screen, go: (next) => dispatch({ type: 'SCREEN', screen: next }) }}
+        onTitle={() => setNaming(c.handle)}
       />
       <div className="screen">
         <div className="stack">
@@ -199,6 +204,36 @@ export function CityMap() {
               Abandon campaign
             </button>
           </div>
+        </Sheet>
+      ) : null}
+
+      {naming !== undefined ? (
+        <Sheet title="What do they call you?" onClose={() => setNaming(undefined)}>
+          <form
+            className="stack"
+            onSubmit={(e) => {
+              e.preventDefault();
+              update((cur) => rename(cur, naming));
+              setNaming(undefined);
+            }}
+          >
+            <input
+              className="name-field"
+              value={naming}
+              onChange={(e) => setNaming(e.target.value.slice(0, HANDLE_MAX))}
+              placeholder={c.handle}
+              autoComplete="off"
+              spellCheck={false}
+              autoFocus
+              aria-label="Your name"
+            />
+            <p className="faint" style={{ margin: 0, fontSize: 12, lineHeight: 1.6 }}>
+              The name on the paper and in the crew's mouths. Leave it blank to go back to The Architect.
+            </p>
+            <button type="submit" className="btn btn--primary btn--wide">
+              Keep it
+            </button>
+          </form>
         </Sheet>
       ) : null}
     </>

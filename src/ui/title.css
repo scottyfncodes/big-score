@@ -1,22 +1,84 @@
+/*
+ * The title: Port Argent at night with the dial over it, the lockup, one line,
+ * and the button. The button is there from the first frame; only the dial and
+ * the stamp move, and neither is in its way.
+ */
+
 .title {
   flex: 1;
-  display: grid;
-  place-items: center;
-  padding: calc(24px + var(--safe-top)) 18px calc(24px + var(--safe-bottom));
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--ink);
+  overflow: hidden;
+}
+
+.title__hero {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 300px;
+  overflow: hidden;
+  --sky-h: min(46%, 240px);
   background:
-    radial-gradient(90% 60% at 50% 0%, rgba(200, 69, 47, 0.12), transparent 62%),
-    repeating-linear-gradient(
-      -45deg,
-      transparent 0 22px,
-      rgba(217, 164, 65, 0.02) 22px 23px
-    ),
-    var(--ink);
+    radial-gradient(70% 55% at 50% 42%, rgba(200, 69, 47, 0.1), transparent 70%),
+    linear-gradient(#0b0908, #1a1310 72%, #241812);
+}
+
+.title__stars {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* The dial sits over the city like a moon; the buildings stand in front of its lower edge. */
+.title__moon {
+  position: absolute;
+  left: 50%;
+  /* Anchored to the skyline, so its lower edge is always behind the rooftops. */
+  bottom: calc(var(--sky-h) - 64px);
+  width: min(70vw, 300px, 38vh);
+  transform: translateX(-50%);
+  overflow: visible;
+  filter: drop-shadow(0 14px 30px rgba(0, 0, 0, 0.6));
+}
+
+.title__pointer {
+  fill: var(--red);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.8));
+}
+
+.title__sky {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: var(--sky-h);
+  display: block;
+}
+
+/* The street fades into the page so the lockup sits in the city, not under it. */
+.title__hero::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 28px;
+  background: linear-gradient(transparent, var(--ink));
+  pointer-events: none;
 }
 
 .title__frame {
+  flex: none;
   width: 100%;
   max-width: 460px;
+  margin: 0 auto;
+  padding: 18px 18px calc(22px + var(--safe-bottom));
   text-align: center;
+  position: relative;
 }
 
 .title__eyebrow {
@@ -24,12 +86,12 @@
   letter-spacing: 0.28em;
   text-transform: uppercase;
   color: var(--text-faint);
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 }
 
 .title__word {
   font-family: var(--serif);
-  font-size: clamp(46px, 16vw, 76px);
+  font-size: clamp(46px, 14vw, 76px);
   line-height: 0.86;
   letter-spacing: -0.02em;
   color: var(--paper);
@@ -42,6 +104,9 @@
   color: var(--red);
   position: relative;
   padding: 0 6px;
+  transform: rotate(-2deg);
+  text-shadow: 0 0 40px rgba(200, 69, 47, 0.35);
+  animation: title-stamp 0.34s cubic-bezier(0.2, 1.5, 0.4, 1) 0.12s both;
 }
 
 .title__score::after {
@@ -55,102 +120,39 @@
   opacity: 0.5;
 }
 
+@keyframes title-stamp {
+  0% { opacity: 0; transform: scale(2.2) rotate(-4deg); }
+  65% { opacity: 1; transform: scale(0.95) rotate(-2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(-2deg); }
+}
+
 .title__blurb {
-  margin: 22px auto 26px;
-  max-width: 380px;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--text-dim);
+  margin: 16px auto 20px;
+  font-family: var(--serif);
+  font-size: 18px;
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--text);
 }
 
 .title__actions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  text-align: left;
+  gap: 8px;
 }
 
-.title__field {
-  display: flex;
+/* The one button. Big enough to be the mechanic, not a link to it. */
+.title__go {
+  min-height: 64px;
+  font-size: 18px;
+  letter-spacing: 0.12em;
+  box-shadow: 0 10px 30px rgba(200, 69, 47, 0.28);
+}
+
+.btn--gold.title__go {
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 4px;
-}
-
-.title__field input {
-  min-height: var(--tap);
-  background: var(--ink-2);
-  border: 1px solid var(--board-line);
-  border-radius: var(--radius);
-  color: var(--text);
-  padding: 0 14px;
-  font-size: 16px;
-  font-family: var(--serif);
-}
-
-.title__field input:focus {
-  outline: none;
-  border-color: var(--gold-dim);
-}
-
-.title__foot {
-  margin-top: 26px;
-  font-size: 11px;
-  line-height: 1.6;
-}
-
-.title__frame { position: relative; }
-
-.title__dial {
-  position: absolute;
-  left: 50%;
-  top: -10px;
-  width: min(92vw, 420px);
-  transform: translateX(-50%);
-  opacity: 0.22;
-  overflow: visible;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.title__dial-ring {
-  transform-origin: 50px 50px;
-  animation: title-spin 1.4s cubic-bezier(0.15, 0.85, 0.25, 1) both;
-}
-
-@keyframes title-spin {
-  from { transform: rotate(-400deg); }
-  to { transform: rotate(0deg); }
-}
-
-.title__frame > *:not(.title__dial) { position: relative; z-index: 1; }
-
-.title__the { animation: reveal-up 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) 0.2s both; }
-
-.title__score {
-  animation: title-stamp 0.42s cubic-bezier(0.2, 1.5, 0.4, 1) 1.15s both;
-  text-shadow: 0 0 40px rgba(200, 69, 47, 0.35);
-}
-
-@keyframes title-stamp {
-  0% { opacity: 0; transform: scale(2.4) rotate(-4deg); }
-  65% { opacity: 1; transform: scale(0.95) rotate(-2deg); }
-  100% { opacity: 1; transform: scale(1) rotate(-2deg); }
-}
-
-.title__eyebrow,
-.title__blurb,
-.title__actions,
-.title__foot { animation: reveal-up 0.8s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
-.title__eyebrow { animation-delay: 0.05s; }
-.title__blurb { animation-delay: 1.5s; }
-.title__actions { animation-delay: 1.7s; }
-.title__foot { animation-delay: 1.9s; }
-
-.title__continue {
-  flex-direction: column;
-  gap: 2px;
-  min-height: 60px;
+  gap: 3px;
+  box-shadow: 0 10px 30px rgba(217, 164, 65, 0.22);
 }
 
 .title__save {
@@ -161,7 +163,145 @@
   opacity: 0.75;
 }
 
-@keyframes reveal-up {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+.title__actions .btn--ghost {
+  min-height: 40px;
+  border-color: transparent;
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.title__foot {
+  margin-top: 14px;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* ---------------------------------------------------------- the skyline */
+
+.title__dial-num {
+  font-family: var(--mono);
+  font-size: 8px;
+  fill: rgba(232, 224, 210, 0.55);
+  text-anchor: middle;
+}
+
+.title__dial-initials {
+  font-family: var(--sans);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  fill: var(--paper);
+  text-anchor: middle;
+}
+
+/* One turn in on arrival — quick, so it lands with the stamp. */
+.title__dial-in,
+.title__dial-ring { transform-origin: 120px 120px; }
+
+.title__dial-in {
+  animation: title-spin 0.9s cubic-bezier(0.15, 0.85, 0.25, 1) both;
+}
+
+@keyframes title-spin {
+  from { transform: rotate(-300deg); }
+  to { transform: rotate(0deg); }
+}
+
+/* Then somebody works the combination: left, right, left, and round again. */
+.title__dial-ring {
+  animation: title-work 9s cubic-bezier(0.3, 0, 0.2, 1) 0.9s infinite;
+}
+
+@keyframes title-work {
+  0%, 8% { transform: rotate(0deg); }
+  22%, 30% { transform: rotate(-108deg); }
+  46%, 54% { transform: rotate(36deg); }
+  68%, 76% { transform: rotate(-54deg); }
+  92%, 100% { transform: rotate(0deg); }
+}
+
+.title__win { fill: #18130f; }
+.title__win--lit { fill: rgba(232, 190, 110, 0.75); }
+.title__win--red { fill: rgba(200, 69, 47, 0.85); }
+
+/* A few rooms where somebody is still up, and the lights come and go. */
+.title__win--flicker { animation: title-window 6s steps(1, end) infinite; }
+
+@keyframes title-window {
+  0%, 62% { opacity: 1; }
+  63%, 100% { opacity: 0.12; }
+}
+
+.title__sign {
+  font-family: var(--sans);
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  fill: rgba(162, 151, 138, 0.55);
+  text-anchor: middle;
+}
+
+.title__gleam {
+  fill: rgba(217, 164, 65, 0.07);
+  animation: title-gleam 4.5s ease-in-out infinite;
+}
+
+@keyframes title-gleam {
+  0%, 100% { opacity: 0.4; transform: translateX(0); }
+  50% { opacity: 1; transform: translateX(3px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title__score,
+  .title__dial-in,
+  .title__dial-ring,
+  .title__win--flicker,
+  .title__gleam { animation: none !important; }
+}
+
+/* Desktop: the city gets the room; the lockup and button stay a column. */
+@media (min-width: 720px) {
+  .title__hero { --sky-h: min(52%, 300px); }
+  .title__frame { padding-top: 8px; }
+}
+
+/* ------------------------------------------------------- the player's name */
+
+.hud__title--btn {
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+}
+
+.hud__title-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The pencil: small, but it is the way to change what the city calls you. */
+.hud__edit {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  color: var(--gold-dim);
+}
+
+.name-field {
+  min-height: var(--tap);
+  background: var(--ink);
+  border: 1px solid var(--board-line);
+  border-radius: var(--radius);
+  color: var(--text);
+  padding: 0 14px;
+  font-size: 16px;
+  font-family: var(--serif);
+}
+
+.name-field:focus {
+  outline: none;
+  border-color: var(--gold-dim);
 }
