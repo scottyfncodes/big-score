@@ -55,7 +55,7 @@ export function memoryFor(member: CrewMember, run: RunState, target: Target, day
   if (strong?.eventId) {
     const title = eventById(strong.eventId)?.title ?? 'A situation';
     const good = strong.tone === 'great' || strong.tone === 'good';
-    return make(`${title} — ${at}. ${good ? 'Handled it.' : 'It went badly.'}`, good ? 'good' : 'bad');
+    return make(`${title} at ${at}. ${good ? 'Handled it.' : 'It went badly.'}`, good ? 'good' : 'bad');
   }
 
   const led = run.results.filter((r) => r.actorId === member.id);

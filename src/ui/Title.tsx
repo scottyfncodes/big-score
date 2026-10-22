@@ -41,7 +41,7 @@ export function Title() {
           <span className="title__the">THE BIG</span>
           <span className="title__score">SCORE</span>
         </h1>
-        <p className="title__blurb">You don't crack the safe. You pick who does.</p>
+        <p className="title__blurb">You pick who cracks the safe.</p>
 
         <div className="title__actions">
           {save ? (
@@ -57,7 +57,7 @@ export function Title() {
                 className={`btn btn--wide ${confirmNew ? 'btn--primary' : 'btn--ghost'}`}
                 onClick={start}
               >
-                {confirmNew ? 'Tap again — this ends your current campaign' : 'New campaign'}
+                {confirmNew ? 'Tap again. This ends your current campaign' : 'New campaign'}
               </button>
             </>
           ) : (

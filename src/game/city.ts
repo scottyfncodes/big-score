@@ -94,7 +94,7 @@ export function cityWire(campaign: Campaign): WireItem[] {
       rank: full ? 70 : 40,
       targetId,
       text: full
-        ? `${target.name} has restocked as far as it is going to — better locks, and about ${Math.round(mul * 100)}% of what it held the first time.`
+        ? `${target.name} has restocked as far as it is going to: better locks, and about ${Math.round(mul * 100)}% of what it held the first time.`
         : `${target.name} is filling back up behind new locks. Word is it holds about ${Math.round(mul * 100)}% of what it did.`,
     });
   }

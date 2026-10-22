@@ -131,7 +131,7 @@ export function TargetBoard() {
                 <div className="dim" style={{ fontSize: 13, marginTop: 3 }}>
                   {passes === 0
                     ? 'Nobody has looked at this properly yet.'
-                    : `${passes} pass${passes > 1 ? 'es' : ''} — the estimates are tightening.`}
+                    : `${passes} pass${passes > 1 ? 'es' : ''}. The estimates are tightening.`}
                 </div>
               </div>
               <button
@@ -159,7 +159,7 @@ export function TargetBoard() {
                             : `${band.low}–${band.high}`}
                       </span>
                     ) : (
-                      <span className="sec__value faint">— unknown —</span>
+                      <span className="sec__value faint">unknown</span>
                     )}
                   </div>
                 );
@@ -198,7 +198,7 @@ export function TargetBoard() {
             </div>
             <p className="faint intel__note">
               A source sells what it has. Cheap information is confident and often wrong,
-              and you will only find out which on the night. None of it survives the job —
+              and you will only find out which on the night. None of it survives the job:
               rotations change, and an inside man does not stay inside.
             </p>
           </div>
@@ -220,7 +220,7 @@ export function TargetBoard() {
                   >
                     <div className="approach__name">{approach.name}</div>
                     <div className="approach__blurb">
-                      {locked ? 'Needs a name on the inside — buy the intel first.' : approach.blurb}
+                      {locked ? 'Needs a name on the inside. Buy the intel first.' : approach.blurb}
                     </div>
                     <div className="approach__tags">
                       <span className="tag">+{approach.heatBase} heat</span>

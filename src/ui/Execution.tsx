@@ -282,7 +282,7 @@ function dialFor(plan: Plan, reveal: Reveal, run: RunState): Omit<DialProps, 'on
   const nameOf = (id?: string) => plan.crew.find((m) => m.id === id);
   const label = (m?: CrewMember) => ({
     who: m?.name.split(' ')[0] ?? 'The crew',
-    initials: m?.initials ?? '—',
+    initials: m?.initials ?? '?',
   });
 
   if (reveal.kind === 'stage') {

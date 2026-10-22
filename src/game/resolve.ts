@@ -117,7 +117,7 @@ export function startRun(base: Plan, seed: number, seenEventIds: string[] = []):
     tone: 'neutral',
     text: alarm
       ? `Through the front, in the open. The clock is already running: about ${Math.round(window / 60)} minutes of city before anybody official arrives.`
-      : `Quiet start. Nothing is counting yet — the moment somebody outside notices, you have around ${Math.round(window / 60)} minutes.`,
+      : `Quiet start. Nothing is counting yet. The moment somebody outside notices, you have around ${Math.round(window / 60)} minutes.`,
   });
 
   return {
@@ -383,7 +383,7 @@ function checkExposure(run: RunState, stage: StageId): RunState {
           stage,
           tone: 'bad',
           text: next.alarm
-            ? `That went out. Somewhere a screen has this address on it — call it ${Math.round(next.window / 60)} minutes.`
+            ? `That went out. Somewhere a screen has this address on it. Call it ${Math.round(next.window / 60)} minutes.`
             : 'Somebody outside has been watching the building for a while now, and has stopped watching it.',
         },
       ],

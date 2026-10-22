@@ -16,7 +16,7 @@ export const GREED_OFFERS: Record<string, [string, string]> = {
     '{who} is already looking at the back room. “Everything they really care about is in there.”',
   ],
   argent_vine: [
-    '{who} has found the repair drawer — commissions, not stock. “Nobody counts these.”',
+    '{who} has found the repair drawer: commissions, not stock. “Nobody counts these.”',
     'There is a second safe under the workbench. {who} is already kneeling.',
   ],
   kestrel_gallery: [

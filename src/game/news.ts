@@ -95,7 +95,7 @@ const TEMPLATES: HeadlineTemplate[] = [
     id: 'big',
     when: (r) => r.gross > 400000,
     weight: 4,
-    headline: (c) => `${c.money} — CITY'S BIGGEST THEFT IN A DECADE`,
+    headline: (c) => `${c.money}: CITY'S BIGGEST THEFT IN A DECADE`,
     standfirst: (c) =>
       `The scale of the loss at ${c.target.name} has prompted questions about private security across ${c.districtName}.`,
   },

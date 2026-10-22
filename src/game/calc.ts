@@ -479,7 +479,7 @@ export function analysePlan(plan: Plan): PlanAnalysis {
   if (plan.crew.length < CREW_MIN) warnings.push('You cannot run this alone.');
   for (const role of plan.approach.keyRoles) {
     if (!have.has(role)) {
-      warnings.push(`No ${role} — the ${plan.approach.name} approach leans on one.`);
+      warnings.push(`No ${role}. The ${plan.approach.name} approach leans on one.`);
     }
   }
   if (plan.crew.length > CREW_SOFT_MAX) {
@@ -490,7 +490,7 @@ export function analysePlan(plan: Plan): PlanAnalysis {
     if (need.covered) continue;
     warnings.push(
       need.critical
-        ? `No ${TAG_WORDS[need.tag]} — ${STAGE_PROFILES[need.stage].name} needs it badly.`
+        ? `No ${TAG_WORDS[need.tag]}. ${STAGE_PROFILES[need.stage].name} needs it badly.`
         : `No ${TAG_WORDS[need.tag]} for ${STAGE_PROFILES[need.stage].name.toLowerCase()}.`,
     );
   }
