@@ -545,7 +545,7 @@ export const EVENTS: GameEvent[] = [
     actor: { any: true },
     when: (ctx) => !ctx.knows('rotation'),
     title: 'There is someone still in the building',
-    body: 'A radio is playing two floors up. Nobody bought the rotation, so nobody — {actor} included — knows who that is or when they go home.',
+    body: 'A radio is playing two floors up. Nobody bought the rotation, so nobody ({actor} included) knows who that is or when they go home.',
     choices: [
       {
         id: 'wait',
@@ -1198,7 +1198,7 @@ export const EVENTS: GameEvent[] = [
     actor: { any: true },
     when: (ctx) => ctx.actor.loyalty > 70,
     title: 'They have been thinking about it',
-    body: 'On the way in, {actor} says — not as a complaint, just as a fact — that they have never once been left behind on one of your jobs, and that they have noticed.',
+    body: 'On the way in, {actor} says, not as a complaint, just as a fact, that they have never once been left behind on one of your jobs, and that they have noticed.',
     choices: [
       {
         id: 'say_nothing',

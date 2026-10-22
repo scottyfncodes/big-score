@@ -183,7 +183,7 @@ export function CityMap() {
                 setMenu(false);
               }}
             >
-              Lie low — {LIE_LOW_DAYS} days, −{Math.min(c.heat, lieLowRelief(c.heat))} heat
+              Lie low: {LIE_LOW_DAYS} days, −{Math.min(c.heat, lieLowRelief(c.heat))} heat
             </button>
             <button
               className="btn btn--wide"
@@ -193,11 +193,11 @@ export function CityMap() {
                 setMenu(false);
               }}
             >
-              Destroy evidence — {money(EVIDENCE_COST)}, −{EVIDENCE_HEAT} heat
+              Destroy evidence: {money(EVIDENCE_COST)}, −{EVIDENCE_HEAT} heat
             </button>
             <p className="faint" style={{ fontSize: 12, lineHeight: 1.6 }}>
               Heat drives every building in the city: more guards, faster response, dearer
-              crew. It never ends a campaign on its own — it just makes the next job the
+              crew. It never ends a campaign on its own. It just makes the next job the
               hardest version of itself.
             </p>
             <button className="btn btn--ghost btn--wide" onClick={() => dispatch({ type: 'RESET' })}>

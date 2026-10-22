@@ -128,7 +128,7 @@ export function CrewRoom() {
                 <div className="eyebrow">People you know · {known.length}</div>
                 <p className="faint hire-note">
                   Loyalty carries across every rehire. At {LOYALTY_RETAIN} they stop going home
-                  after the job and stay on the payroll — for a retainer.
+                  after the job and stay on the payroll, for a retainer.
                 </p>
                 <div className="grid">
                   {known.map((member) => {
@@ -283,7 +283,7 @@ function RosterCard({
               {condition === 'arrested'
                 ? 'In custody'
                 : condition === 'injured'
-                  ? `Injured — back day ${availableOnDay}`
+                  ? `Injured, back day ${availableOnDay}`
                   : retained
                     ? 'Stays between jobs'
                     : 'Goes home after the job'}
@@ -300,7 +300,7 @@ function RosterCard({
 
           <div className="roster__bars">
             <Bar
-              label={retained ? 'Loyalty — yours' : `Loyalty — stays at ${LOYALTY_RETAIN}`}
+              label={retained ? 'Loyalty: yours' : `Loyalty: stays at ${LOYALTY_RETAIN}`}
               value={member.loyalty}
               color={retained ? 'var(--gold)' : 'var(--green)'}
             />
@@ -308,7 +308,7 @@ function RosterCard({
           </div>
 
           <div className="eyebrow" style={{ margin: '14px 0 8px' }}>
-            Training — {jobsRun} job{jobsRun === 1 ? '' : 's'} run
+            Training: {jobsRun} job{jobsRun === 1 ? '' : 's'} run
             {member.trained ? ` · ${member.trained} lessons paid for` : ''}
           </div>
           <div className="train">
@@ -359,7 +359,7 @@ function RosterCard({
             {member.traits.map((id) => (
               <div key={id} className="roster__trait">
                 <strong>{TRAITS[id]?.name}</strong>
-                <span className="faint"> — {TRAITS[id]?.blurb}</span>
+                <span className="faint">: {TRAITS[id]?.blurb}</span>
               </div>
             ))}
           </div>
@@ -369,7 +369,7 @@ function RosterCard({
           <div className="row">
             {condition === 'arrested' ? (
               <button className="btn btn--sm btn--gold" disabled={bankroll < bail} onClick={onBail}>
-                Bail out — {money(bail)}
+                Bail out: {money(bail)}
               </button>
             ) : null}
             <button className="btn btn--sm btn--ghost" onClick={onRelease}>

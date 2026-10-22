@@ -155,8 +155,7 @@ h4 {
   top: 0;
   z-index: 30;
   padding: calc(6px + var(--safe-top)) 12px 6px;
-  background: linear-gradient(var(--ink) 70%, rgba(20, 17, 15, 0.86));
-  backdrop-filter: blur(8px);
+  background: var(--ink);
   border-bottom: 1px solid var(--board-line);
 }
 
@@ -279,16 +278,6 @@ h4 {
   box-shadow: var(--shadow-sm);
   padding: 14px;
   position: relative;
-}
-
-.paper::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: radial-gradient(rgba(120, 100, 70, 0.08) 1px, transparent 1px);
-  background-size: 4px 4px;
-  border-radius: inherit;
 }
 
 .eyebrow {

@@ -146,7 +146,7 @@ export function PlanningBoard() {
               )}
               {missingRoles.length ? (
                 <p className="plan__gap">
-                  No {missingRoles.map((r) => ARCHETYPES[r].name.toLowerCase()).join(' or ')} — {plan.approach.name}{' '}
+                  No {missingRoles.map((r) => ARCHETYPES[r].name.toLowerCase()).join(' or ')}. The {plan.approach.name}{' '}
                   leans on {missingRoles.length > 1 ? 'them' : 'one'}. You can still go.
                 </p>
               ) : null}
@@ -191,7 +191,7 @@ export function PlanningBoard() {
                         <span className="faint"> · {STAGE_PROFILES[need.stage].name}</span>
                       </span>
                       <span className="kitrow__have faint">
-                        {need.carrying ?? (need.critical ? 'nothing' : '—')}
+                        {need.carrying ?? (need.critical ? 'nothing' : '–')}
                       </span>
                     </div>
                   ))

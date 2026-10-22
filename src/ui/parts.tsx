@@ -90,7 +90,7 @@ export function Hud({
           </button>
         ) : null}
         {onTitle ? (
-          <button className="hud__title hud__title--btn" onClick={onTitle} aria-label={`${title} — rename`}>
+          <button className="hud__title hud__title--btn" onClick={onTitle} aria-label={`Rename ${title}`}>
             <span className="hud__title-text">{title}</span>
             <svg className="hud__edit" viewBox="0 0 16 16" aria-hidden="true">
               <path d="M11.5 2.5l2 2L6 12l-2.8.8L4 10z" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
